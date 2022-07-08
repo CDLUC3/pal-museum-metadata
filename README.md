@@ -48,3 +48,4 @@ python code/pal-museum-metadata/src/scan.py
   - Any UC3 dev or stage machine
 - Where should the url run for the mods files
   - Will need to copy them 
+  - Will need to think through processing if we modify the mods content
