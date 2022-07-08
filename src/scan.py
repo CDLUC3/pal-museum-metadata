@@ -7,6 +7,7 @@ import re
 import json
 import pprint
 import csv
+from xml.dom.minidom import parse
 
 class Scan:
     def __init__(self):
@@ -31,7 +32,13 @@ class Scan:
                     list.append(os.path.join(dir, entry.name))
 
     def reportFile(self, file):
-        self.ids.append(re.sub(r'\.xml$', '', os.path.basename(file)));
+        doc = parse(file)
+        nl = doc.getElementsByTagName("mods:identifier")
+        print(os.path.basename(file))
+        for i in range(0, nl.length-1):
+            print(nl.item(i).firstChild.nodeValue)
+        base = re.sub(r'\.xml$', '', os.path.basename(file))
+        self.ids.append(base);
         
 print("Pal Museum Mods Report")
 scan = Scan()
