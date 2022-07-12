@@ -13,6 +13,37 @@ This code will be run from a Cloud9 environment into which the following resourc
 - code directory
   - /home/ec2-user/environment/code/pal-museum-metadata
 
+## Saving Changes to GitHub
+
+This Cloud9 environment is shared by members of the UC3 team.
+
+Therefore, it will be important to not save your github credentials into this working environement.
+
+All of our code will live in a public repository, so it will be easy to pull code into this environment.
+
+```
+git fetch origin main
+```
+
+When you want to save changes back to GitHub, you have a few options
+- push the changes from Cloud9 to GitHub
+  - you will need to provide github credentials each time you push
+  - because you have 2FA enabled (a good thing!), you will need to use a [GitHub Personal Access Token](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/creating-a-personal-access-token) to save your work
+    - Create a Personal Access Token
+    - Name it something like "Leading Fellows Token"
+    - Set the expiration date for the end of the fellowship
+    - Enable only "public_repo" for this token
+    - Save the generated token in a safe place that will be easy to copy/paste
+  - When you are prompted for a username and password
+    - use your github username for username
+    - use your personal access token as a password
+- make the changes through the github website
+- clone the repository to your PC and push the changes from there
+
+```
+git push origin main
+```
+
 ## Running the code
 ```
 cd ~/environment
