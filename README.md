@@ -36,12 +36,22 @@ python code/pal-museum-metadata/src/scan.py
       - Terry will build a web service to make these accessible to the ingest process 
 
 ## Tasks
+
+### Weeks 1-3 (does this include travel time?)
 - Analyze match between files in the inventory vs identifiers in mods
+  - List of matching image and metadata
+  - List images missing metadata
+  - List metadata missing images
 - Recommend local identifier(s) to utilize
 - Map mods fields to Merritt erc
 - Hand generate a manifest file for a single Pal Museum object (urls depend on where mods and images are served)
+  - Create ingest manifest for an object with one or more files; supply metadata through Merritt UI
 - Load hand generated manifest to Merritt stage
+
+### Next steps
 - Generate list of files per object identifier
+- Create ingest manifests for objects with one or more files; create a manifest of manifests to supply corresponding metadata
+
 
 ## Questions to answer
 - Where should the web server run for the image files?
