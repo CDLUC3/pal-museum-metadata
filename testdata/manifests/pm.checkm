@@ -1,0 +1,8 @@
+#%checkm_0.7
+#%profile | http://uc3.cdlib.org/registry/ingest/manifest/mrt-ingest-manifest
+#%prefix | mrt: | http://merritt.cdlib.org/terms#
+#%prefix | nfo: | http://www.semanticdesktop.org/ontologies/2007/03/22/nfo#
+#%fields | nfo:fileurl | nfo:hashalgorithm | nfo:hashvalue | nfo:filesize | nfo:filelastmodified | nfo:filename | mrt:mimetype
+http://uc3-mrtdocker01x2-dev.cdlib.org:8097/mods/0232_01_1518.xml |  |  |  |  | 0232_01_1518.xml | 
+http://uc3-mrtdocker01x2-dev.cdlib.org:8097/image/0001%20-%20Ali%20Qazaq/01/0001.01.0454.tif |  |  |  |  | 0001.01.0454.tif | 
+#%eof
