@@ -8,3 +8,5 @@ ERC metadata added manually through the Merritt UI.
 - We will copy these manifests to S3 or some other web server
 - Create a [batch manifest](https://github.com/CDLUC3/mrt-doc/wiki/Manifests#iv-a-batch-of-object-manifest-files) that references each of these object manifests
   - The batch manifest will contain the url to an object manifest + ERC metadata
+  
+[Merritt Manifest Tool](https://cdluc3.github.io/mrt-doc/manifest/index.html?unittest=1)
