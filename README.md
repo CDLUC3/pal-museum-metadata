@@ -19,31 +19,11 @@ This Cloud9 environment is shared by members of the UC3 team.
 
 Therefore, it will be important to not save your github credentials into this working environement.
 
-## Committing Changes
-
-Since you will be the primary user of this environment, you can save your name and email for git commit history.
-
-This will credit you with the changes that are made in support of this project.
-```
-    git config --global user.name "Your Name"
-    git config --global user.email you@example.com
-```
-
-These changes will take place when commiting changes.
-
-```
-git commit -m "my changes"
-```
-
-## Pulling Changes
-
 All of our code will live in a public repository, so it will be easy to pull code into this environment.
 
 ```
 git fetch origin main
 ```
-
-## Pushing Changes
 
 When you want to save changes back to GitHub, you have a few options
 - push the changes from Cloud9 to GitHub
@@ -82,18 +62,18 @@ python code/pal-museum-metadata/src/scan.py
   - Has erc descriptive metadata
   - Has full file list
     - Url to the mods files
-      - Terry will build a web service to make these accessible to the ingest service 
+      - Terry will build a web service to make these accessible to the ingest service (done)
     - Url to the image files
-      - Terry will build a web service to make these accessible to the ingest process 
+      - Terry will build a web service to make these accessible to the ingest process (done)
 
 ## Tasks
 
-### Weeks 1-3 (does this include travel time?)
+### Weeks 1-3 (does this include travel time?) - starting Aug 9
 - Analyze match between files in the inventory vs identifiers in mods
   - List of matching image and metadata
   - List images missing metadata
   - List metadata missing images
-- Recommend local identifier(s) to utilize
+- Recommend local identifier(s) to utilize likely some form of: 0001.02.0001
 - Map mods fields to Merritt erc
 - Hand generate a manifest file for a single Pal Museum object (urls depend on where mods and images are served)
   - Create ingest manifest for an object with one or more files; supply metadata through Merritt UI
