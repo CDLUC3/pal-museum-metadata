@@ -19,11 +19,31 @@ This Cloud9 environment is shared by members of the UC3 team.
 
 Therefore, it will be important to not save your github credentials into this working environement.
 
+## Committing Changes
+
+Since you will be the primary user of this environment, you can save your name and email for git commit history.
+
+This will credit you with the changes that are made in support of this project.
+```
+    git config --global user.name "Your Name"
+    git config --global user.email you@example.com
+```
+
+These changes will take place when commiting changes.
+
+```
+git commit -m "my changes"
+```
+
+## Pulling Changes
+
 All of our code will live in a public repository, so it will be easy to pull code into this environment.
 
 ```
 git fetch origin main
 ```
+
+## Pushing Changes
 
 When you want to save changes back to GitHub, you have a few options
 - push the changes from Cloud9 to GitHub
