@@ -7,15 +7,20 @@ class Inventory
     end
     
     def read_inventory
+        count = 0
         File.open(@path).each do |line|
             m = line.match(%r[\/([^\/]*)\.(tif|jpg)$]i)
             if (m) 
-                mods = ModsFile.new(m[1])
+                key = m[1]
+                mm = key.match(%r[([^.]+\.[^.]+\.[^.]+)\.*$])
+                key = mm[1] if mm
+                count += 1
+                mods = getMods(key)
                 mods.addFile(line[31..])
                 addToInventory(mods)
             end
         end
-        puts "Records Found: #{@inventory.size}"
+        puts "Inventory Records Found: #{count}"
     end
     
     def getMods(key)
@@ -51,7 +56,8 @@ class Inventory
     def write_arr(fname, arr)
         File.open(fname, "w") do |f|
             arr.each do |k|
-                f.write("#{k} - #{@inventory[k].image_count}\n")
+                m = @inventory[k]
+                f.write("#{k} - #{m.image_count} images, id=#{m.id}\n")
             end
         end
     end
@@ -142,6 +148,25 @@ class ModsFile
     def no_image
         return false if has_match
         @images.length == 0
+    end
+    
+    def id
+        @id
+    end
+    
+    def idnum
+        @idnum
+    end
+
+    def mods
+        @mods
+    end
+    def title
+        @title
+    end
+
+    def title_trans
+        @title_trans
     end
     
     def print
