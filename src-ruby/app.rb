@@ -135,7 +135,8 @@ class ModsFile
     end
     
     def addFile(f)
-        @images.push(f.strip)
+        fs = f.strip.gsub(' ', '%20')
+        @images.push(fs)
     end
     
     def image_count
