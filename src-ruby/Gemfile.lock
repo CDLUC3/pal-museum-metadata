@@ -28,6 +28,7 @@ GEM
     rack (2.2.4)
     rack-protection (2.2.2)
       rack
+    redcarpet (3.5.1)
     ruby2_keywords (0.0.5)
     sinatra (2.2.2)
       mustermann (~> 2.0)
@@ -42,6 +43,7 @@ PLATFORMS
 DEPENDENCIES
   aws-sdk-s3
   nokogiri
+  redcarpet
   sinatra
 
 BUNDLED WITH
