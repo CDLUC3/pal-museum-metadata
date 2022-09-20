@@ -16,22 +16,8 @@ ruby app.rb
 - Right click "server.rb" and click "Run".
 - Click the link that reads "Your code is running at ..."
 
-## To view files without the preview server...
+### A note about image links
 
-Page through output files
-
-_Press 'q' to exit file preview_
-
-```
-less output/has_match.txt
-less output/no_image.txt
-less output/no_mods.txt
-less output/mismatch_key.txt
-less output/metadata.tsv
-```
-
-Preview generated manifests and erc files
-```
-less /mrt/output/manifests/0001/0001.01.0033.checkm 
-less /mrt/output/manifests/0001/0001.01.0033.erc 
-```
+- Tif files are often downloaded rather than rendered in a browser
+- Right click the image link, click Save As
+- If a warning appears, select "keep" to download the image
