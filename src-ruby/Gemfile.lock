@@ -1,17 +1,48 @@
 GEM
   remote: https://rubygems.org/
   specs:
+    aws-eventstream (1.2.0)
+    aws-partitions (1.632.0)
+    aws-sdk-core (3.150.0)
+      aws-eventstream (~> 1, >= 1.0.2)
+      aws-partitions (~> 1, >= 1.525.0)
+      aws-sigv4 (~> 1.1)
+      jmespath (~> 1, >= 1.6.1)
+    aws-sdk-kms (1.58.0)
+      aws-sdk-core (~> 3, >= 3.127.0)
+      aws-sigv4 (~> 1.1)
+    aws-sdk-s3 (1.114.0)
+      aws-sdk-core (~> 3, >= 3.127.0)
+      aws-sdk-kms (~> 1)
+      aws-sigv4 (~> 1.4)
+    aws-sigv4 (1.5.1)
+      aws-eventstream (~> 1, >= 1.0.2)
+    jmespath (1.6.1)
     mini_portile2 (2.8.0)
+    mustermann (2.0.2)
+      ruby2_keywords (~> 0.0.1)
     nokogiri (1.13.8)
       mini_portile2 (~> 2.8.0)
       racc (~> 1.4)
     racc (1.6.0)
+    rack (2.2.4)
+    rack-protection (2.2.2)
+      rack
+    ruby2_keywords (0.0.5)
+    sinatra (2.2.2)
+      mustermann (~> 2.0)
+      rack (~> 2.2)
+      rack-protection (= 2.2.2)
+      tilt (~> 2.0)
+    tilt (2.0.11)
 
 PLATFORMS
   ruby
 
 DEPENDENCIES
+  aws-sdk-s3
   nokogiri
+  sinatra
 
 BUNDLED WITH
    1.17.3
