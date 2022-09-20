@@ -9,6 +9,8 @@ class Inventory
         @path = "/mrt/inventory/inventory.txt"
         @inventory = {}
         %x[ rm -rf #{Inventory.output_dir}/output/* ]
+        %x[ rm -rf "/home/ec2-user/environment/code/pal-museum-metadata/src-ruby/output/*.md" ]
+        %x[ rm -rf "/home/ec2-user/environment/code/pal-museum-metadata/src-ruby/output/*.tsv" ]
     end
     
     def read_inventory
@@ -21,7 +23,7 @@ class Inventory
                 key = mm[1] if mm
                 count += 1
                 mods = getMods(key)
-                mods.addFile(line[31..])
+                mods.addFile(line[31..], line[20..30])
                 addToInventory(mods)
             end
         end
@@ -41,24 +43,35 @@ class Inventory
         has_match = []
         no_image = []
         no_mods = []
+        bad_file = []
         mismatch_key = []
         
         @inventory.keys.sort.each do |k|
             m = @inventory[k]
             has_match.push(k) if m.has_match
             no_image.push(k) if m.no_image
-            no_mods.push(k) if m.no_mods
+            if m.no_mods
+                if m.has_bad_file
+                    bad_file.push(k)
+                else
+                    no_mods.push(k) 
+                end
+            end
             mismatch_key.push(k) if m.mismatch_key
         end
         
         File.open("output/index.md", "w") do |f|
           f.write("# Pal Museum Metadata Analysis\n")
+          f.write("- [Inventory](/inventory)\n")
+          f.write("- [Metadata Spreadsheet](/output/metadata.tsv)\n")
           puts "Has Image and Mods: #{has_match.length}"
           f.write("- [Has Image and Mods: #{has_match.length}](/output/has_match.md)\n")
           puts "Has Mods Only - No Images:  #{no_image.length}"
           f.write("- [Has Mods Only - No Images: #{no_image.length}](/output/no_image.md)\n")
           puts "Has Image Only - No Mods:   #{no_mods.length}"
           f.write("- [Has Image Only - No Mods: #{no_mods.length}](/output/no_mods.md)\n")
+          puts "Has Invalid Image - No Mods:   #{bad_file.length}"
+          f.write("- [Has Invalid Image Only - No Mods: #{bad_file.length}](/output/bad_file.md)\n")
           puts "Mods Key Name does not match filename:   #{mismatch_key.length}"
           f.write("- [Mods Key Name does not match filename: #{mismatch_key.length}](/output/mismatch_key.md)\n")
         end
@@ -66,6 +79,7 @@ class Inventory
         write_arr("output/has_match.md", "Has Image and Mods", has_match)
         write_arr("output/no_mods.md", "Has Image Only - No Mods", no_mods)
         write_arr("output/no_image.md", "Has Mods Only - No Images", no_image)
+        write_arr("output/bad_file.md", "Has Mods Only - No Images", bad_file)
         write_arr("output/mismatch_key.md", "Mods Key Name does not match filename", no_image)
         
         File.open("output/metadata.tsv", "w") do |tsv|
@@ -80,6 +94,7 @@ class Inventory
     def write_arr(fname, header, arr)
         File.open(fname, "w") do |f|
             f.write("# #{header}: #{arr.length}\n")
+            f.write("\n[Home](/output/index.md)\n\n")
             arr.each do |k|
                 m = @inventory[k]
                 f.write("- *#{k}*  - #{m.image_count} images; ")
@@ -91,9 +106,11 @@ class Inventory
                   f.write("[mods](/mods/#{k}); ")
                 end
                 m.images.each_with_index do |im, i|
+                  iname = "Img #{i+1} (#{m.file_size[i]})"
                   f.write(", ") if i > 0
-                  f.write("[Img #{i+1}](/image/#{im)})")
+                  f.write("[#{iname}](/image/#{im})")
                 end
+                f.write(" --has bad file ") if m.has_bad_file
                 f.write("\n")
             end
         end
@@ -141,6 +158,7 @@ class ModsFile
     def initialize(key)
         @key = key
         @images = []
+        @file_size = []
         @mods = ""
         @title_trans = ""
         @title = ""
@@ -154,9 +172,21 @@ class ModsFile
         @key
     end
     
-    def addFile(f)
+    def addFile(f, size)
         fs = f.strip.gsub(' ', '%20')
         @images.push(fs)
+        @file_size.push(size.strip.to_i)
+    end
+    
+    def file_size
+        @file_size
+    end
+    
+    def has_bad_file
+        @file_size.each do |sz|
+            return true if sz < 5000
+        end
+        false
     end
     
     def image_count
