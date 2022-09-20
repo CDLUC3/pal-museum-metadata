@@ -1,6 +1,7 @@
 require 'sinatra'
 require 'sinatra/base'
 require 'aws-sdk-s3'
+require 'redcarpet'
 
 set :bind, '0.0.0.0'
 set :port, 8080
@@ -31,7 +32,7 @@ end
 get '/image/*' do
   image = params['splat'][0]
   if image =~ %r[^\d\d\d\d]
-    get_file("#{image}")
+    redirect "http://uc3-mrtdocker01x2-dev.cdlib.org:8097/image/#{image.gsub(" ", "%20")}"
   else
     status 403
     "invalid image name"
@@ -43,12 +44,19 @@ end
 #  get_file("mods/#{mods}")
 #end
 
+get "/output/*.md" do
+  f = "output/#{params['splat'][0]}.md"
+  renderer = Redcarpet::Render::HTML.new
+  markdown = Redcarpet::Markdown.new(renderer, {tables: true})
+  markdown.render(File.open(f).read)
+end
+
 get "/output/*" do
     send_file "output/#{params['splat'][0]}"
 end
 
 get "/" do
-  send_file "index.html"
+  redirect "/output/index.md"
 end
 
 get "/erc/*" do
