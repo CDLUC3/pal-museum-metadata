@@ -51,15 +51,22 @@ class Inventory
             mismatch_key.push(k) if m.mismatch_key
         end
         
-        puts "Has Match: #{has_match.length}"
-        puts "No Image:  #{no_image.length}"
-        puts "No Mods:   #{no_mods.length}"
-        puts "Mismatch Key:   #{mismatch_key.length}"
+        File.open("output/index.md", "w") do |f|
+          f.write("# Pal Museum Metadata Analysis\n")
+          puts "Has Image and Mods: #{has_match.length}"
+          f.write("- [Has Image and Mods: #{has_match.length}](/output/has_match.md)\n")
+          puts "Has Mods Only - No Images:  #{no_image.length}"
+          f.write("- [Has Mods Only - No Images: #{no_image.length}](/output/no_image.md)\n")
+          puts "Has Image Only - No Mods:   #{no_mods.length}"
+          f.write("- [Has Image Only - No Mods: #{no_mods.length}](/output/no_mods.md)\n")
+          puts "Mods Key Name does not match filename:   #{mismatch_key.length}"
+          f.write("- [Mods Key Name does not match filename: #{mismatch_key.length}](/output/mismatch_key.md)\n")
+        end
         
-        write_arr("output/has_match.txt", has_match)
-        write_arr("output/no_mods.txt", no_mods)
-        write_arr("output/no_image.txt", no_image)
-        write_arr("output/mismatch_key.txt", no_image)
+        write_arr("output/has_match.md", "Has Image and Mods", has_match)
+        write_arr("output/no_mods.md", "Has Image Only - No Mods", no_mods)
+        write_arr("output/no_image.md", "Has Mods Only - No Images", no_image)
+        write_arr("output/mismatch_key.md", "Mods Key Name does not match filename", no_image)
         
         File.open("output/metadata.tsv", "w") do |tsv|
             tsv.write("who\twhat\twhen\twhere\timg_count\n")
@@ -70,11 +77,24 @@ class Inventory
         end
     end
     
-    def write_arr(fname, arr)
+    def write_arr(fname, header, arr)
         File.open(fname, "w") do |f|
+            f.write("# #{header}: #{arr.length}\n")
             arr.each do |k|
                 m = @inventory[k]
-                f.write("[#{k}] - #{m.image_count} images, id=[#{m.id}]\n")
+                f.write("- *#{k}*  - #{m.image_count} images; ")
+                if m.has_match
+                  f.write("[checkm](/checkm/#{k}), ")
+                  f.write("[erc](/erc/#{k}), ")
+                end    
+                if m.no_mods == false
+                  f.write("[mods](/mods/#{k}); ")
+                end
+                m.images.each_with_index do |im, i|
+                  f.write(", ") if i > 0
+                  f.write("[Img #{i+1}](/image/#{im)})")
+                end
+                f.write("\n")
             end
         end
     end
@@ -106,8 +126,8 @@ class Scan
     end
     
     def status
-        puts "Dirs Scanned:  #{@ndir}"
-        puts "Files Scanned: #{@nfile}"
+        #puts "Dirs Scanned:  #{@ndir}"
+        #puts "Files Scanned: #{@nfile}"
     end
     
     def process(inventory, fd)
@@ -141,6 +161,10 @@ class ModsFile
     
     def image_count
         @images.length
+    end
+    
+    def images
+        @images
     end
     
     def fname
