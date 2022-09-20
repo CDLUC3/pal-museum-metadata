@@ -2,26 +2,27 @@ require 'sinatra'
 require 'sinatra/base'
 require 'aws-sdk-s3'
 require 'redcarpet'
+require 'down'
 
 set :bind, '0.0.0.0'
 set :port, 8080
 
 def get_file(key)
 
-  puts key
+  puts "Key: #{key}"
 
   @s3_client = Aws::S3::Client.new(region: 'us-west-2')
-  @presigner = Aws::S3::Presigner.new(client: @s3_client)
+  
   @bucket = "uc3-s3-stg"
 
-  url, headers = @presigner.presigned_request(
-    :get_object, bucket: @bucket, key: key
-  )
-  if url
-    puts "hello #{url}"
-    response.headers['Location'] = url
-    status 303
-    "success: redirecting"
+  resp = @s3_client.get_object({
+    bucket: @bucket, 
+    key: key, 
+  })
+
+  if resp
+    content_type resp.content_type
+    resp.body.read
   else
     status 404
     "#{key} not found"
@@ -32,7 +33,7 @@ end
 get '/image/*' do
   image = params['splat'][0]
   if image =~ %r[^\d\d\d\d]
-    redirect "http://uc3-mrtdocker01x2-dev.cdlib.org:8097/image/#{image.gsub(" ", "%20")}"
+    get_file(image)
   else
     status 403
     "invalid image name"
@@ -53,6 +54,10 @@ end
 
 get "/output/*" do
     send_file "output/#{params['splat'][0]}"
+end
+
+get "/inventory" do
+    send_file "/mrt/inventory/inventory.txt"
 end
 
 get "/" do
