@@ -5,13 +5,18 @@ cd /home/ec2-user/environment/code/pal-museum-metadata/src-ruby
 bundle install
 ```
 
-## Run
+## Run The Metadata Generator
 
 ```
 ruby app.rb
 ```
 
-## Results
+## Run the preview server
+
+- Right click "server.rb" and click "Run".
+- Click the link that reads "Your code is running at ..."
+
+## To view files without the preview server...
 
 Page through output files
 
@@ -25,7 +30,8 @@ less output/mismatch_key.txt
 less output/metadata.tsv
 ```
 
-Preview generated manifests
+Preview generated manifests and erc files
 ```
 less /mrt/output/manifests/0001/0001.01.0033.checkm 
+less /mrt/output/manifests/0001/0001.01.0033.erc 
 ```
