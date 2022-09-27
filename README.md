@@ -85,8 +85,32 @@ python code/pal-museum-metadata/src/scan.py
 
 
 ## Questions to answer
-- Where should the web server run for the image files?
-  - Any UC3 dev or stage machine
-- Where should the url run for the mods files
-  - Will need to copy them 
-  - Will need to think through processing if we modify the mods content
+- Metadata
+  - What is the format of our LocalId?
+  - What mods metadata do we want to publish?
+- What objects to publish?
+  - Mods + Image - Yes
+  - Mods only - ?
+  - Image only - ? (if a valid id can be created)
+  - Who consults on this decision?
+- Additional data
+  - What is in the new batch of data?
+    - Images only?
+    - Images and mods?
+    - Replacement files?
+  - [ ] Copy to S3
+  - [ ] Modify program to pull new resources
+- What is in the database?
+  - Is there unique data in the database that is not already in mods?
+  - Can we associate this data with an identifier?
+- Manifest Generation (technical questions)
+  - Where should the web server run for the image files?
+    - images are in S3, served by docker01
+    - mods are in S3, served by docker01
+  - How will ERC metadata be associated with objects?
+    - manifest of manifests?
+    - erc files?
+    - [ ] Terry will discuss this with Mark
+  - How will a batch of individual manifests be published to a url for the ingest process?
+    - presume we will copy these into S3.  Additional rights will be needed to push to S3
+    - [ ] Terry will discuss options
