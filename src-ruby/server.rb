@@ -15,17 +15,22 @@ def get_file(key)
   
   @bucket = "uc3-s3-stg"
 
-  resp = @s3_client.get_object({
-    bucket: @bucket, 
-    key: key, 
-  })
+  begin
+    resp = @s3_client.get_object({
+      bucket: @bucket, 
+      key: key
+    })
 
-  if resp
-    content_type resp.content_type
-    resp.body.read
-  else
+    if resp
+      content_type resp.content_type
+      resp.body.read
+    else
+      status 404
+      "#{key} not found"
+    end
+  rescue => e
     status 404
-    "#{key} not found"
+    e.message
   end
 
 end
@@ -46,14 +51,14 @@ end
 #end
 
 get "/output/*.md" do
-  f = "output/#{params['splat'][0]}.md"
+  f = "/mrt/output/#{params['splat'][0]}.md"
   renderer = Redcarpet::Render::HTML.new
   markdown = Redcarpet::Markdown.new(renderer, {tables: true})
   markdown.render(File.open(f).read)
 end
 
 get "/output/*" do
-    send_file "output/#{params['splat'][0]}"
+    send_file "/mrt/output/#{params['splat'][0]}"
 end
 
 get "/inventory" do
