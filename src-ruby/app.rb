@@ -6,6 +6,7 @@ class Inventory
     end
     
     def initialize
+        @invalid_filename = []
         @path = "/mrt/inventory/inventory.txt"
         @inventory = {}
         %x[ rm -rf #{Inventory.output_dir}/output/* ]
@@ -16,7 +17,7 @@ class Inventory
     def read_inventory
         count = 0
         File.open(@path).each do |line|
-            m = line.match(%r[\/([^\/]*)\.(tif|jpg)$]i)
+            m = line.match(%r[\/([^\/]*)\.(tif|jpg|pdf|jpeg|png|tiff)$]i)
             if (m) 
                 key = m[1]
                 mm = key.match(%r[([^.]+\.[^.]+\.[^.]+)\.*$])
@@ -25,6 +26,8 @@ class Inventory
                 mods = getMods(key)
                 mods.addFile(line[31..], line[20..30])
                 addToInventory(mods)
+            else
+                @invalid_filename.push("#{line[31..]} (#{line[20..30].strip})") unless line =~ %r[(\/|\.db)$]
             end
         end
         puts "Inventory Records Found: #{count}"
@@ -45,7 +48,8 @@ class Inventory
         no_mods = []
         bad_file = []
         mismatch_key = []
-        
+        invalid_filename = @invalid_filename
+
         @inventory.keys.sort.each do |k|
             m = @inventory[k]
             has_match.push(k) if m.has_match
@@ -60,7 +64,7 @@ class Inventory
             mismatch_key.push(k) if m.mismatch_key
         end
         
-        File.open("output/index.md", "w") do |f|
+        File.open("#{Inventory.output_dir}/index.md", "w") do |f|
           f.write("# Pal Museum Metadata Analysis\n")
           f.write("- [Inventory](/inventory)\n")
           f.write("- [Metadata Spreadsheet](/output/metadata.tsv)\n")
@@ -74,15 +78,18 @@ class Inventory
           f.write("- [Has Invalid Image Only - No Mods: #{bad_file.length}](/output/bad_file.md)\n")
           puts "Mods Key Name does not match filename:   #{mismatch_key.length}"
           f.write("- [Mods Key Name does not match filename: #{mismatch_key.length}](/output/mismatch_key.md)\n")
+          puts "Invalid file name:   #{invalid_filename.length}"
+          f.write("- [Invalid file name: #{invalid_filename.length}](/output/invalid_filename.md)\n")
         end
         
-        write_arr("output/has_match.md", "Has Image and Mods", has_match)
-        write_arr("output/no_mods.md", "Has Image Only - No Mods", no_mods)
-        write_arr("output/no_image.md", "Has Mods Only - No Images", no_image)
-        write_arr("output/bad_file.md", "Has Mods Only - No Images", bad_file)
-        write_arr("output/mismatch_key.md", "Mods Key Name does not match filename", no_image)
+        write_arr("#{Inventory.output_dir}/has_match.md", "Has Image and Mods", has_match)
+        write_arr("#{Inventory.output_dir}/no_mods.md", "Has Image Only - No Mods", no_mods)
+        write_arr("#{Inventory.output_dir}/no_image.md", "Has Mods Only - No Images", no_image)
+        write_arr("#{Inventory.output_dir}/bad_file.md", "Has Mods Only - No Images", bad_file)
+        write_arr("#{Inventory.output_dir}/mismatch_key.md", "Mods Key Name does not match filename", no_image)
+        write_str("#{Inventory.output_dir}/invalid_filename.md", "Invalid Filename", invalid_filename)
         
-        File.open("output/metadata.tsv", "w") do |tsv|
+        File.open("#{Inventory.output_dir}/metadata.tsv", "w") do |tsv|
             tsv.write("who\twhat\twhen\twhere\timg_count\n")
             has_match.each do |k|
                 @inventory[k].write_manifest
@@ -91,9 +98,26 @@ class Inventory
         end
     end
     
+    def write_file_ext_counts(f, arr)
+        exts = {}
+        arr.each do |k|
+            if @inventory.key?(k)
+                m = @inventory[k]
+                m.images.each do |i|
+                    ext = i.split(".")[-1].strip.downcase
+                    exts[ext] = exts.fetch(ext, 0) + 1
+                end
+            end
+        end
+        exts.each do |ext|
+            f.write("- #{ext}: #{exts[ext]}\n")
+        end
+    end
+    
     def write_arr(fname, header, arr)
         File.open(fname, "w") do |f|
             f.write("# #{header}: #{arr.length}\n")
+            write_file_ext_counts(f, arr)
             f.write("\n[Home](/output/index.md)\n\n")
             arr.each do |k|
                 m = @inventory[k]
@@ -112,6 +136,16 @@ class Inventory
                 end
                 f.write(" --has bad file ") if m.has_bad_file
                 f.write("\n")
+            end
+        end
+    end
+
+    def write_str(fname, header, arr)
+        File.open(fname, "w") do |f|
+            f.write("# #{header}: #{arr.length}\n")
+            f.write("\n[Home](/output/index.md)\n\n")
+            arr.each do |k|
+                f.write("- #{k}\n")
             end
         end
     end
@@ -166,6 +200,7 @@ class ModsFile
         @when = ""
         @idnum = ""
         @id = ""
+        @coll = ""
     end
     
     def key
@@ -176,6 +211,8 @@ class ModsFile
         fs = f.strip.gsub(' ', '%20')
         @images.push(fs)
         @file_size.push(size.strip.to_i)
+        m = f.match(%r[^[0-9]{4,4} ? - ?([^\/]*)\/])
+        @coll = m[1] if m
     end
     
     def file_size
@@ -205,11 +242,12 @@ class ModsFile
         @mods = fd
         doc = Nokogiri::XML(File.open(fd))
         @title_trans = doc.xpath("//mods:titleInfo/mods:title[@type='translated']/text()").to_s
+        @title_trans = "#{@title_trans}. The #{@coll} Collection." unless @coll.empty?
         whos = []
         doc.xpath("//mods:name[mods:role/mods:roleTerm[contains(.,'creator')]]/mods:namePart[not(@type)]/text()").each do |t|
             whos.push(t.to_s)
         end
-        @who = whos.join("; ")
+        @who = whos[0]
         @when = doc.xpath("//mods:originInfo/mods:dateCreated[not(@type)]/text()").to_s
         titles = []
         doc.xpath("//mods:titleInfo/mods:title[@lang]/text()").each do |t|
@@ -239,7 +277,7 @@ class ModsFile
         @id
     end
 
-   def where
+    def where
         @where
     end
     
