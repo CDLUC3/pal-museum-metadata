@@ -5,13 +5,34 @@ class Inventory
         "/mrt/output"
     end
     
+    def self.merritt_user
+        ENV.fetch('MERRITT_USER', 'foo')
+    end
+
+    def self.merritt_password
+        ENV.fetch('MERRITT_PASSWORD', 'bar')
+    end
+
+    def self.merritt_instance
+        ENV.fetch('MERRITT_INSTANCE', 'merritt-stage')
+    end
+    
+    def self.show_settings
+        puts("export MERRITT_USER='#{self.merritt_user}'")
+        puts("export MERRITT_PASSWORD='#{self.merritt_password}'")
+        puts("export MERRITT_INSTANCE='#{self.merritt_instance}'")
+    end
+    
     def initialize
         @invalid_filename = []
+        @scripts = {}
         @path = "/mrt/inventory/inventory.txt"
         @inventory = {}
-        %x[ rm -rf #{Inventory.output_dir}/output/* ]
-        %x[ rm -rf "/home/ec2-user/environment/code/pal-museum-metadata/src-ruby/output/*.md" ]
-        %x[ rm -rf "/home/ec2-user/environment/code/pal-museum-metadata/src-ruby/output/*.tsv" ]
+        %x[ rm -rf #{Inventory.output_dir}/* ]
+    end
+    
+    def scripts
+        @scripts
     end
     
     def read_inventory
@@ -94,8 +115,16 @@ class Inventory
             has_match.each do |k|
                 @inventory[k].write_manifest
                 @inventory[k].write_erc(tsv)
-                @inventory[k].write_script
+                script = @inventory[k].write_script
+                @scripts[script] = @scripts.fetch(script, 0) + 1
             end
+        end
+    
+        File.open("#{Inventory.output_dir}/index.md", "a") do |f|
+          f.write("\n## Script Files \n\n")
+          @scripts.keys.each do |k|
+              f.write("- [#{k} (#{@scripts[k]})](#{k})\n")
+          end
         end
     end
     
@@ -291,11 +320,11 @@ class ModsFile
     end
 
     def title
-        @title
+        @title.gsub('"', ' ')
     end
 
     def who
-        @who
+        @who.gsub('"', ' ')
     end
 
     def when
@@ -303,7 +332,7 @@ class ModsFile
     end
 
     def title_trans
-        @title_trans
+        @title_trans.gsub('"', ' ')
     end
     
     def mismatch_key
@@ -343,18 +372,19 @@ class ModsFile
     def write_script
         return if mismatch_key
         File.open(script_file, "a") do |f|
-            f.write("curl -u 'foo:bar' -H 'Accept: application/json' \\\n")
-            f.write("-F 'file=#{manifest_dir}/#{key}.checkm' \\\n")
-            f.write("-F 'type=file' \\\n")
+            f.write("curl -u '#{Inventory.merritt_user}:#{Inventory.merritt_password}' -H 'Accept: application/json' \\\n")
+            f.write("-F 'file=@#{manifest_dir}/#{key}.checkm' \\\n")
+            f.write("-F 'type=manifest' \\\n")
             f.write("-F 'submitter=foo/PalMuseum' \\\n")
             f.write("-F 'responseForm=xml' \\\n")   
             f.write("-F 'profile=merritt_demo_content' \\\n")
-            f.write("-F 'title=#{@title_trans}' \\\n")
-            f.write("-F 'creator=#{@who}' \\\n")
+            f.write("-F \"title=#{@title_trans}\" \\\n")
+            f.write("-F \"creator=#{@who}\" \\\n")
             f.write("-F 'date=#{@when}' \\\n")
             f.write("-F 'localIdentifier=#{@where}' \\\n")
-            f.write("https://merritt-stage.cdlib.org/object/update\n\n")
+            f.write("https://#{Inventory.merritt_instance}.cdlib.org/object/update\n\n")
         end
+        script_file
     end
     
     def write_manifest
@@ -398,6 +428,7 @@ class ModsFile
         
 end
 
+Inventory.show_settings
 inventory = Inventory.new
 inventory.read_inventory
 scan = Scan.new
