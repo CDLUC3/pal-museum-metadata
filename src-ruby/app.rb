@@ -94,6 +94,7 @@ class Inventory
             has_match.each do |k|
                 @inventory[k].write_manifest
                 @inventory[k].write_erc(tsv)
+                @inventory[k].write_script
             end
         end
     end
@@ -326,12 +327,34 @@ class ModsFile
         "#{Inventory.output_dir}/#{dir}"
     end
 
+    def script_file
+        dir = @key.split(".")[0]
+        "#{Inventory.output_dir}/#{dir}.sh"
+    end
+
     def manifest_file
         "#{manifest_dir}/#{key}.checkm"
     end
 
     def erc_file
         "#{manifest_dir}/#{key}.erc"
+    end
+    
+    def write_script
+        return if mismatch_key
+        File.open(script_file, "a") do |f|
+            f.write("curl -u 'foo:bar' -H 'Accept: application/json' \\\n")
+            f.write("-F 'file=#{manifest_dir}/#{key}.checkm' \\\n")
+            f.write("-F 'type=file' \\\n")
+            f.write("-F 'submitter=foo/PalMuseum' \\\n")
+            f.write("-F 'responseForm=xml' \\\n")   
+            f.write("-F 'profile=merritt_demo_content' \\\n")
+            f.write("-F 'title=#{@title_trans}' \\\n")
+            f.write("-F 'creator=#{@who}' \\\n")
+            f.write("-F 'date=#{@when}' \\\n")
+            f.write("-F 'localIdentifier=#{@where}' \\\n")
+            f.write("https://merritt-stage.cdlib.org/object/update\n\n")
+        end
     end
     
     def write_manifest
