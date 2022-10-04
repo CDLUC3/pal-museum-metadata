@@ -88,3 +88,9 @@ get "/mods/*" do
     k = params['splat'][0].gsub(".", "_")
     send_file "/mrt/mods/palmu_mods/mods/#{k}.xml"
 end
+
+get "/mrt/output/*.sh" do
+    content_type 'text'
+    k = params['splat'][0].gsub(".", "_")
+    send_file "/mrt/output/#{k}.sh"
+end
