@@ -38,7 +38,8 @@ class Inventory
     def read_inventory
         count = 0
         File.open(@path).each do |line|
-            m = line.match(%r[\/([^\/]*)\.(tif|jpg|pdf|jpeg|png|tiff)$]i)
+            next if line =~ %r[( mods\/| consistency-reports| mrt\/| scan-review\/|sorttable.js|palmu.db.sql| index.html| README.md| api-table| _config.yml)]
+            m = line.match(%r[\/([^\/]*)\.(bmp|mp3|jpg|pdf|jpeg|png|tiff|tif)$]i)
             if (m) 
                 key = m[1]
                 mm = key.match(%r[^([^.]+\.[^.]+\.[^.]+)\..*$])
@@ -294,7 +295,7 @@ class ModsFile
     
     def addFile(f, size)
         if f =~ %r[2022-10-08-xfer\/]
-          f = f.gsub(%r[2022-10-08-xfer\/], '').gsub(%r[\/(tiff|TIFF)\/], '/')
+          f = f.gsub(%r[2022-10-08-xfer\/], '').gsub(%r[\/(tiff|TIFF|mp3)\/], '/')
         end
         fs = f.strip.gsub(' ', '%20')
         @images.push(fs)
