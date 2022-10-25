@@ -41,7 +41,7 @@ class Inventory
             m = line.match(%r[\/([^\/]*)\.(tif|jpg|pdf|jpeg|png|tiff)$]i)
             if (m) 
                 key = m[1]
-                mm = key.match(%r[([^.]+\.[^.]+\.[^.]+)\.*$])
+                mm = key.match(%r[^([^.]+\.[^.]+\.[^.]+)\..*$])
                 key = mm[1] if mm
                 count += 1
                 mods = getMods(key)
@@ -113,11 +113,22 @@ class Inventory
         File.open("#{Inventory.output_dir}/metadata.tsv", "w") do |tsv|
             tsv.write("who\twhat\twhen\twhere\timg_count\n")
             has_match.each do |k|
-                @inventory[k].write_manifest
                 @inventory[k].write_erc(tsv)
-                script = @inventory[k].write_script
-                @scripts[script] = @scripts.fetch(script, 0) + 1
             end
+        end
+
+        has_match.each do |k|
+            @inventory[k].write_manifest
+            script = @inventory[k].write_script
+            @scripts[script] = @scripts.fetch(script, 0) + 1
+        end
+
+        no_mods.each do |k|
+            m = @inventory[k]
+            next unless m.valid_key
+            m.write_manifest
+            script = @inventory[k].write_script
+            @scripts[script] = @scripts.fetch(script, 0) + 1
         end
     
         File.open("#{Inventory.output_dir}/index.md", "a") do |f|
@@ -139,6 +150,7 @@ class Inventory
                 end
             end
         end
+        f.write("\n\n### File Extension Counts\n")
         exts.each do |ext|
             f.write("- #{ext}: #{exts[ext]}\n")
         end
@@ -147,24 +159,15 @@ class Inventory
     def write_arr(fname, header, arr)
         File.open(fname, "w") do |f|
             f.write("# #{header}: #{arr.length}\n")
-            write_file_ext_counts(f, arr)
             f.write("\n[Home](/output/index.md)\n\n")
+            write_file_ext_counts(f, arr)
+            
+            f.write("### Object Keys\n")
             arr.each do |k|
                 m = @inventory[k]
-                f.write("- *#{k}*  - #{m.image_count} images; ")
-                if m.has_match
-                  f.write("[checkm](/checkm/#{k}), ")
-                  f.write("[erc](/erc/#{k}), ")
-                end    
-                if m.no_mods == false
-                  f.write("[mods](/mods/#{k}); ")
-                end
-                m.images.each_with_index do |im, i|
-                  iname = "Img #{i+1} (#{m.file_size[i]})"
-                  f.write(", ") if i > 0
-                  f.write("[#{iname}](/image/#{im})")
-                end
-                f.write(" --has bad file ") if m.has_bad_file
+                f.write("- #{k}; ")
+                f.write("[Metadata](/erc/#{k}); ") unless m.no_mods
+                f.write("[#{m.images.length} img](/checkm/#{k}) ") if m.images.length > 0 && m.valid_key
                 f.write("\n")
             end
         end
@@ -174,9 +177,11 @@ class Inventory
         File.open(fname, "w") do |f|
             f.write("# #{header}: #{arr.length}\n")
             f.write("\n[Home](/output/index.md)\n\n")
+            f.write("\n##Keys\n\n<pre>")
             arr.each do |k|
-                f.write("- #{k}\n")
+               f.write("#{k}\n")
             end
+            f.write("</pre>\n")
         end
     end
 end
@@ -237,12 +242,26 @@ class ModsFile
         @key
     end
     
+    def valid_key
+        @key =~ %r[^[0-9]+\.[0-9]+\.[0-9]+$]
+    end
+    
     def addFile(f, size)
+        if f =~ %r[2022-10-08-xfer\/]
+          f = f.gsub(%r[2022-10-08-xfer\/], '').gsub(%r[\/(tiff|TIFF)\/], '/')
+        end
         fs = f.strip.gsub(' ', '%20')
         @images.push(fs)
         @file_size.push(size.strip.to_i)
-        m = f.match(%r[^[0-9]{4,4} ? - ?([^\/]*)\/])
-        @coll = m[1] if m
+        m = f.match(%r[^[0-9]{4,4} ? ?- ?([^\/]*)\/])
+        m2 = f.match(%r[^([0-9]{4,4})\/])
+        if m
+          @coll = m[1]
+        elsif (m2)
+          @coll = m2[1]
+        else
+          puts f
+        end
     end
     
     def file_size
