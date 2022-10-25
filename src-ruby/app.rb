@@ -69,18 +69,27 @@ class Inventory
         no_mods = []
         bad_file = []
         mismatch_key = []
+        invalid_key = []
         invalid_filename = @invalid_filename
 
         @inventory.keys.sort.each do |k|
             m = @inventory[k]
-            has_match.push(k) if m.has_match
-            no_image.push(k) if m.no_image
-            if m.no_mods
-                if m.has_bad_file
-                    bad_file.push(k)
-                else
-                    no_mods.push(k) 
+            if m.valid_key
+                if m.has_match
+                    has_match.push(k) 
+                elsif m.no_image
+                    no_image.push(k)
                 end
+
+                if m.no_mods
+                    if m.has_bad_file
+                        bad_file.push(k)
+                    else
+                        no_mods.push(k) 
+                    end
+                end
+            else
+                invalid_key.push(k)
             end
             mismatch_key.push(k) if m.mismatch_key
         end
@@ -95,20 +104,23 @@ class Inventory
           f.write("- [Has Mods Only - No Images: #{no_image.length}](/output/no_image.md)\n")
           puts "Has Image Only - No Mods:   #{no_mods.length}"
           f.write("- [Has Image Only - No Mods: #{no_mods.length}](/output/no_mods.md)\n")
-          puts "Has Invalid Image - No Mods:   #{bad_file.length}"
-          f.write("- [Has Invalid Image Only - No Mods: #{bad_file.length}](/output/bad_file.md)\n")
+          puts "Has Mods Only - Bad Image Names:   #{bad_file.length}"
+          f.write("- [Has Mods Only - Bad Image Name: #{bad_file.length}](/output/bad_file.md)\n")
           puts "Mods Key Name does not match filename:   #{mismatch_key.length}"
           f.write("- [Mods Key Name does not match filename: #{mismatch_key.length}](/output/mismatch_key.md)\n")
-          puts "Invalid file name:   #{invalid_filename.length}"
-          f.write("- [Invalid file name: #{invalid_filename.length}](/output/invalid_filename.md)\n")
+          puts "Unsupported File Type:   #{invalid_filename.length}"
+          f.write("- [Unsupported File Type: #{invalid_filename.length}](/output/invalid_filename.md)\n")
+          puts "Invalid Object Key:   #{invalid_key.length}"
+          f.write("- [Invalid Object Key: #{invalid_key.length}](/output/invalid_key.md)\n")
         end
         
         write_arr("#{Inventory.output_dir}/has_match.md", "Has Image and Mods", has_match)
         write_arr("#{Inventory.output_dir}/no_mods.md", "Has Image Only - No Mods", no_mods)
         write_arr("#{Inventory.output_dir}/no_image.md", "Has Mods Only - No Images", no_image)
-        write_arr("#{Inventory.output_dir}/bad_file.md", "Has Mods Only - No Images", bad_file)
-        write_arr("#{Inventory.output_dir}/mismatch_key.md", "Mods Key Name does not match filename", no_image)
-        write_str("#{Inventory.output_dir}/invalid_filename.md", "Invalid Filename", invalid_filename)
+        write_arr("#{Inventory.output_dir}/bad_file.md", "Has Mods Only - Bad Image Name", bad_file)
+        write_arr("#{Inventory.output_dir}/mismatch_key.md", "Mods Key Name does not match filename", mismatch_key)
+        write_str("#{Inventory.output_dir}/invalid_filename.md", "Unsupported File Type", invalid_filename)
+        write_arr("#{Inventory.output_dir}/invalid_key.md", "Object Key Does not Match Expected Pattern", invalid_key)
         
         File.open("#{Inventory.output_dir}/metadata.tsv", "w") do |tsv|
             tsv.write("who\twhat\twhen\twhere\timg_count\n")
@@ -123,9 +135,16 @@ class Inventory
             @scripts[script] = @scripts.fetch(script, 0) + 1
         end
 
+        invalid_key.each do |k|
+            @inventory[k].write_manifest
+        end
+
+        bad_file.each do |k|
+            @inventory[k].write_manifest
+        end
+
         no_mods.each do |k|
             m = @inventory[k]
-            next unless m.valid_key
             m.write_manifest
             script = @inventory[k].write_script
             @scripts[script] = @scripts.fetch(script, 0) + 1
@@ -162,24 +181,47 @@ class Inventory
             f.write("\n[Home](/output/index.md)\n\n")
             write_file_ext_counts(f, arr)
             
-            f.write("### Object Keys\n")
+            f.write("\n\n### Object Keys - Valid Keys\n")
             arr.each do |k|
                 m = @inventory[k]
+                next unless m.valid_key
                 f.write("- #{k}; ")
                 f.write("[Metadata](/erc/#{k}); ") unless m.no_mods
-                f.write("[#{m.images.length} img](/checkm/#{k}) ") if m.images.length > 0 && m.valid_key
+                f.write("[#{m.images.length} img](/checkm/#{m.key_sanitized}) ") if m.images.length > 0 
+                f.write("\n")
+            end
+
+            f.write("\n\n### Object Keys - Invalid Keys\n")
+            arr.each do |k|
+                m = @inventory[k]
+                next if m.valid_key
+                f.write("- #{k}; ")
+                f.write("[Metadata](/erc/#{k.gsub(%r[ ], '_')}); ") unless m.no_mods
+                f.write("[#{m.images.length} img](/checkm/#{m.key_sanitized}) ") if m.images.length > 0 
                 f.write("\n")
             end
         end
     end
 
     def write_str(fname, header, arr)
+        exts = {}
+        arr.each do |k|
+            ext = k.split(' (')[0].split(".")[-1].strip.downcase
+            exts[ext] = exts.fetch(ext, 0) + 1
+        end
+
         File.open(fname, "w") do |f|
             f.write("# #{header}: #{arr.length}\n")
             f.write("\n[Home](/output/index.md)\n\n")
-            f.write("\n##Keys\n\n<pre>")
+
+            f.write("\n\n### File Extension Counts\n")
+            exts.keys.sort.each do |ext|
+                f.write("- #{ext}: #{exts[ext]}\n")
+            end
+
+            f.write("\n\n##Keys\n\n<pre>")
             arr.each do |k|
-               f.write("#{k}\n")
+               f.write("#{k.gsub(%r[\n], ' ')}\n")
             end
             f.write("</pre>\n")
         end
@@ -242,8 +284,12 @@ class ModsFile
         @key
     end
     
+    def key_sanitized
+        @key.gsub(%r[^a-zA-Z0-9\.], '_')
+    end
+    
     def valid_key
-        @key =~ %r[^[0-9]+\.[0-9]+\.[0-9]+$]
+        @key =~ %r[^[0-9]{4,4}\.[0-9]+\.[0-9]+$]
     end
     
     def addFile(f, size)
@@ -371,7 +417,11 @@ class ModsFile
     end
     
     def manifest_dir
-        dir = @key.split(".")[0]
+        if valid_key
+            dir = @key.split(".")[0]
+        else
+            dir = 'invalid_key'
+        end
         "#{Inventory.output_dir}/#{dir}"
     end
 
@@ -381,7 +431,7 @@ class ModsFile
     end
 
     def manifest_file
-        "#{manifest_dir}/#{key}.checkm"
+        "#{manifest_dir}/#{key_sanitized}.checkm"
     end
 
     def erc_file
@@ -415,7 +465,7 @@ class ModsFile
             f.write("#%prefix | mrt: | http://merritt.cdlib.org/terms#\n")
             f.write("#%prefix | nfo: | http://www.semanticdesktop.org/ontologies/2007/03/22/nfo#\n")
             f.write("#%fields | nfo:fileurl | nfo:hashalgorithm | nfo:hashvalue | nfo:filesize | nfo:filelastmodified | nfo:filename | mrt:mimetype\n")
-            f.write("http://uc3-mrtdocker01x2-dev.cdlib.org:8097/mods/#{fname} |  |  |  |  | #{fname} | \n")
+            f.write("http://uc3-mrtdocker01x2-dev.cdlib.org:8097/mods/#{fname} |  |  |  |  | #{fname} | \n") unless no_mods
             @images.each do |im|
                 f.write("http://uc3-mrtdocker01x2-dev.cdlib.org:8097/image/#{im} |  |  |  |  | #{File.basename(im)} | \n")
             end
