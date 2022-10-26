@@ -26,6 +26,7 @@ class Inventory
     def initialize
         @invalid_filename = []
         @scripts = {}
+        @mds = {}
         @path = "/mrt/inventory/inventory.txt"
         @inventory = {}
         %x[ rm -rf #{Inventory.output_dir}/* ]
@@ -33,6 +34,10 @@ class Inventory
     
     def scripts
         @scripts
+    end
+
+    def mds
+        @mds
     end
     
     def read_inventory
@@ -97,6 +102,14 @@ class Inventory
         
         File.open("#{Inventory.output_dir}/index.md", "w") do |f|
           f.write("# Pal Museum Metadata Analysis\n")
+          f.write("\n## Questions \n")
+          f.write("- For the missing collection names, can we supplement that from the Museum Website? \n")
+          f.write("- For the objects missing metadata, how much could be found from the museum website? \n")
+          f.write("- Is the available content across all collections or just specific ones? \n")
+          f.write("- Can we convey any meaning without mods data? \n")
+          f.write("- If the database is unhelpful, could a finding aid exist that could provide skeletal metadata? \n")
+
+          f.write("\n## Analysis of Content \n")
           f.write("- [Inventory](/inventory)\n")
           f.write("- [Metadata Spreadsheet](/output/metadata.tsv)\n")
           puts "Has Image and Mods: #{has_match.length}"
@@ -134,27 +147,44 @@ class Inventory
             @inventory[k].write_manifest
             script = @inventory[k].write_script
             @scripts[script] = @scripts.fetch(script, 0) + 1
+            @inventory[k].write_obj_md
+            md = @inventory[k].write_md
+            @mds[md] = @mds.fetch(md, 0) + 1
         end
 
         invalid_key.each do |k|
             @inventory[k].write_manifest
+            @inventory[k].write_obj_md
+            md = @inventory[k].write_md
+            @mds[md] = @mds.fetch(md, 0) + 1
         end
 
         bad_file.each do |k|
             @inventory[k].write_manifest
+           @inventory[k].write_obj_md
+            md = @inventory[k].write_md
+            @mds[md] = @mds.fetch(md, 0) + 1
         end
 
         no_mods.each do |k|
             m = @inventory[k]
             m.write_manifest
-            script = @inventory[k].write_script
+            script = m.write_script
             @scripts[script] = @scripts.fetch(script, 0) + 1
+            m.write_obj_md
+            md = m.write_md
+            @mds[md] = @mds.fetch(md, 0) + 1
         end
     
         File.open("#{Inventory.output_dir}/index.md", "a") do |f|
+          f.write("\n## Markdown Files \n\n")
+          @mds.keys.each do |k|
+              f.write("- [`#{k}` (#{@mds[k]})](#{k.gsub(%r[\/mrt], '')})\n")
+          end
+
           f.write("\n## Script Files \n\n")
           @scripts.keys.each do |k|
-              f.write("- [#{k} (#{@scripts[k]})](#{k})\n")
+              f.write("- [`#{k}` (#{@scripts[k]})](#{k})\n")
           end
         end
     end
@@ -186,7 +216,7 @@ class Inventory
             arr.each do |k|
                 m = @inventory[k]
                 next unless m.valid_key
-                f.write("- #{k}; ")
+                f.write("- `#{k}`; ")
                 f.write("[Metadata](/erc/#{k}); ") unless m.no_mods
                 f.write("[#{m.images.length} img](/checkm/#{m.key_sanitized}) ") if m.images.length > 0 
                 f.write("\n")
@@ -196,7 +226,7 @@ class Inventory
             arr.each do |k|
                 m = @inventory[k]
                 next if m.valid_key
-                f.write("- #{k}; ")
+                f.write("- `#{k}`; ")
                 f.write("[Metadata](/erc/#{k.gsub(%r[ ], '_')}); ") unless m.no_mods
                 f.write("[#{m.images.length} img](/checkm/#{m.key_sanitized}) ") if m.images.length > 0 
                 f.write("\n")
@@ -279,6 +309,7 @@ class ModsFile
         @idnum = ""
         @id = ""
         @coll = ""
+        @where = "pal_museum_#{key}"
     end
     
     def key
@@ -294,10 +325,10 @@ class ModsFile
     end
     
     def addFile(f, size)
+        fs = f.strip.gsub(' ', '%20')
         if f =~ %r[2022-10-08-xfer\/]
           f = f.gsub(%r[2022-10-08-xfer\/], '').gsub(%r[\/(tiff|TIFF|mp3)\/], '/')
         end
-        fs = f.strip.gsub(' ', '%20')
         @images.push(fs)
         @file_size.push(size.strip.to_i)
         m = f.match(%r[^[0-9]{4,4} ? ?- ?([^\/]*)\/])
@@ -426,13 +457,31 @@ class ModsFile
         "#{Inventory.output_dir}/#{dir}"
     end
 
+    def manifest_rel_dir
+        if valid_key
+            dir = @key.split(".")[0]
+        else
+            dir = 'invalid_key'
+        end
+        dir
+    end
+
     def script_file
         dir = @key.split(".")[0]
         "#{Inventory.output_dir}/#{dir}.sh"
     end
 
+    def md_file
+        dir = @key.split(".")[0]
+        "#{Inventory.output_dir}/#{dir}.md"
+    end
+
     def manifest_file
         "#{manifest_dir}/#{key_sanitized}.checkm"
+    end
+
+    def obj_md_file
+        "#{manifest_dir}/#{key_sanitized}.md"
     end
 
     def erc_file
@@ -456,6 +505,16 @@ class ModsFile
         end
         script_file
     end
+
+    def write_md
+        return if mismatch_key
+        b = File.exists?(md_file)
+        File.open(md_file, "a") do |f|
+            f.write("\n[Home](/output/index.md)\n\n") unless b
+            f.write("- [#{key}.md](/output/#{manifest_rel_dir}/#{key}.md)\n")
+        end
+        md_file
+    end
     
     def write_manifest
         return if mismatch_key
@@ -471,6 +530,22 @@ class ModsFile
                 f.write("http://uc3-mrtdocker01x2-dev.cdlib.org:8097/image/#{im} |  |  |  |  | #{File.basename(im)} | \n")
             end
             f.write("#%eof\n")
+        end
+    end
+
+    def write_obj_md
+        %x[ mkdir -p #{manifest_dir} ]
+        File.open(obj_md_file, "w") do |f|
+            f.write("\n[Home](/output/index.md)\n\n")
+            f.write("## who: #{@who}\n")
+            f.write("## what: #{@title_trans}\n")
+            f.write("## when: #{@when}\n")
+            f.write("## where: `#{@where}`\n")
+
+            f.write("- [mods](/mods/#{key_sanitized})\n") unless no_mods
+            @images.each_with_index do |im,i|
+                f.write("- [#{File.basename(im)} (#{@file_size[i]})](/image/#{im})\n")
+            end
         end
     end
     
