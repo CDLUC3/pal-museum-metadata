@@ -27,6 +27,7 @@ class Inventory
         @invalid_filename = []
         @scripts = {}
         @mds = {}
+        @mds_stats = {}
         @path = "/mrt/inventory/inventory.txt"
         @inventory = {}
         %x[ rm -rf #{Inventory.output_dir}/* ]
@@ -38,6 +39,10 @@ class Inventory
 
     def mds
         @mds
+    end
+
+    def mds_stats
+        @mds_stats
     end
     
     def read_inventory
@@ -58,6 +63,18 @@ class Inventory
             end
         end
         puts "Inventory Records Found: #{count}"
+    end
+    
+    def register_md(m)
+        k = m.md_file_key
+        @mds[k] = @mds.fetch(k, [])
+        @mds[k].push(m.get_md)
+        @mds_stats[k] = @mds_stats.fetch(k, 0) + 1 unless m.no_mods
+    end
+
+    def register_script(m)
+        script = m.write_script
+        @scripts[script] = @scripts.fetch(script, 0) + 1
     end
     
     def getMods(key)
@@ -144,42 +161,47 @@ class Inventory
         end
 
         has_match.each do |k|
-            @inventory[k].write_manifest
-            script = @inventory[k].write_script
-            @scripts[script] = @scripts.fetch(script, 0) + 1
-            @inventory[k].write_obj_md
-            md = @inventory[k].write_md
-            @mds[md] = @mds.fetch(md, 0) + 1
+            m = @inventory[k]
+            m.write_manifest
+            register_script(m)
+            m.write_obj_md
+            register_md(m)
         end
 
         invalid_key.each do |k|
-            @inventory[k].write_manifest
-            @inventory[k].write_obj_md
-            md = @inventory[k].write_md
-            @mds[md] = @mds.fetch(md, 0) + 1
+            m = @inventory[k]
+            m.write_manifest
+            m.write_obj_md
+            register_md(m)
         end
 
         bad_file.each do |k|
-            @inventory[k].write_manifest
-           @inventory[k].write_obj_md
-            md = @inventory[k].write_md
-            @mds[md] = @mds.fetch(md, 0) + 1
+            m = @inventory[k]
+            m.write_manifest
+            m.write_obj_md
+            register_md(m)
         end
 
         no_mods.each do |k|
             m = @inventory[k]
             m.write_manifest
-            script = m.write_script
-            @scripts[script] = @scripts.fetch(script, 0) + 1
+            register_script(m)
             m.write_obj_md
-            md = m.write_md
-            @mds[md] = @mds.fetch(md, 0) + 1
+            register_md(m)
         end
     
         File.open("#{Inventory.output_dir}/index.md", "a") do |f|
           f.write("\n## Markdown Files \n\n")
           @mds.keys.each do |k|
-              f.write("- [`#{k}` (#{@mds[k]})](#{k.gsub(%r[\/mrt], '')})\n")
+              p = 0
+              p = @mds_stats.fetch(k, 0) * 100 / @mds[k].length if @mds[k].length > 0
+              f.write("- [`#{k}` (#{@mds[k].length} - #{p}%)](/output/#{k}.md)\n")
+              File.open("#{Inventory.output_dir}/#{k}.md", "w") do |mdf|
+                 mdf.write("\n[Home](/output/index.md)\n\n")
+                 @mds[k].sort.each do |line|
+                    mdf.write(line)
+                 end
+              end
           end
 
           f.write("\n## Script Files \n\n")
@@ -452,18 +474,9 @@ class ModsFile
         if valid_key
             dir = @key.split(".")[0]
         else
-            dir = 'invalid_key'
+            dir = 'invalid_key_dir'
         end
         "#{Inventory.output_dir}/#{dir}"
-    end
-
-    def manifest_rel_dir
-        if valid_key
-            dir = @key.split(".")[0]
-        else
-            dir = 'invalid_key'
-        end
-        dir
     end
 
     def script_file
@@ -471,9 +484,13 @@ class ModsFile
         "#{Inventory.output_dir}/#{dir}.sh"
     end
 
-    def md_file
-        dir = @key.split(".")[0]
-        "#{Inventory.output_dir}/#{dir}.md"
+    def md_file_key
+        if valid_key
+            dir = @key.split(".")[0]
+        else
+            dir = 'invalid_key'
+        end
+        dir
     end
 
     def manifest_file
@@ -506,14 +523,11 @@ class ModsFile
         script_file
     end
 
-    def write_md
+    def get_md
         return if mismatch_key
-        b = File.exists?(md_file)
-        File.open(md_file, "a") do |f|
-            f.write("\n[Home](/output/index.md)\n\n") unless b
-            f.write("- [#{key}.md](/output/#{manifest_rel_dir}/#{key}.md)\n")
-        end
-        md_file
+        m = no_mods ? "No metadata." : ""
+        v = valid_key ? "" : "Invalid Key."
+        "- [#{key}.md](/output/#{md_file_key}/#{key}.md) #{image_count} img. #{m} #{v}\n"
     end
     
     def write_manifest
