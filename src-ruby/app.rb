@@ -128,6 +128,7 @@ class Inventory
 
           f.write("\n## Analysis of Content \n")
           f.write("- [Inventory](/inventory)\n")
+          f.write("- [Titles - from Database Dump](/titles)\n")
           f.write("- [Metadata Spreadsheet](/output/metadata.tsv)\n")
           puts "Has Image and Mods: #{has_match.length}"
           f.write("- [Has Image and Mods: #{has_match.length}](/output/has_match.md)\n")
