@@ -192,7 +192,7 @@ class Inventory
     
         File.open("#{Inventory.output_dir}/index.md", "a") do |f|
           f.write("\n## Markdown Files \n\n")
-          @mds.keys.each do |k|
+          @mds.keys.sort.each do |k|
               p = 0
               p = @mds_stats.fetch(k, 0) * 100 / @mds[k].length if @mds[k].length > 0
               f.write("- [`#{k}` (#{@mds[k].length} - #{p}%)](/output/#{k}.md)\n")

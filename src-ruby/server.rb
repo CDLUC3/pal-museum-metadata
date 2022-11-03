@@ -65,6 +65,10 @@ get "/inventory" do
     send_file "/mrt/inventory/inventory.txt"
 end
 
+get "/titles" do
+    send_file "/mrt/files/title.txt"
+end
+
 get "/" do
   redirect "/output/index.md"
 end
