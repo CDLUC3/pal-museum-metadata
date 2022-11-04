@@ -29,6 +29,7 @@ class Inventory
         @mds = {}
         @mds_stats = {}
         @path = "/mrt/inventory/inventory.txt"
+        @titles = "/mrt/files/title.txt"
         @inventory = {}
         %x[ rm -rf #{Inventory.output_dir}/* ]
     end
@@ -64,12 +65,26 @@ class Inventory
         end
         puts "Inventory Records Found: #{count}"
     end
+
+    def read_titles
+        count = 0
+        File.open(@titles).each do |line|
+            arr = line.split("\t")
+            next if arr.length != 3
+            key = arr[0].gsub(%r[http.*$], '')
+            count += 1
+            mods = getMods(key)
+            mods.setTitle(arr[2].gsub(%r[http.*$], ''))
+            addToInventory(mods)
+        end
+        puts "Title Records Found: #{count}"
+    end
     
     def register_md(m)
         k = m.md_file_key
         @mds[k] = @mds.fetch(k, [])
         @mds[k].push(m.get_md)
-        @mds_stats[k] = @mds_stats.fetch(k, 0) + 1 unless m.no_mods
+        @mds_stats[k] = @mds_stats.fetch(k, 0) + 1 if m.has_metadata
     end
 
     def register_script(m)
@@ -104,7 +119,7 @@ class Inventory
                     no_image.push(k)
                 end
 
-                if m.no_mods
+                unless m.has_metadata
                     if m.has_bad_file
                         bad_file.push(k)
                     else
@@ -134,10 +149,10 @@ class Inventory
           f.write("- [Has Image and Mods: #{has_match.length}](/output/has_match.md)\n")
           puts "Has Mods Only - No Images:  #{no_image.length}"
           f.write("- [Has Mods Only - No Images: #{no_image.length}](/output/no_image.md)\n")
-          puts "Has Image Only - No Mods:   #{no_mods.length}"
-          f.write("- [Has Image Only - No Mods: #{no_mods.length}](/output/no_mods.md)\n")
-          puts "Has Mods Only - Bad Image Names:   #{bad_file.length}"
-          f.write("- [Has Mods Only - Bad Image Name: #{bad_file.length}](/output/bad_file.md)\n")
+          puts "Has Image Only - No Metadata:   #{no_mods.length}"
+          f.write("- [Has Image Only - No Metadata: #{no_mods.length}](/output/no_mods.md)\n")
+          puts "Has Metadata Only - Bad Image Names:   #{bad_file.length}"
+          f.write("- [Has Metadata Only - Bad Image Name: #{bad_file.length}](/output/bad_file.md)\n")
           puts "Mods Key Name does not match filename:   #{mismatch_key.length}"
           f.write("- [Mods Key Name does not match filename: #{mismatch_key.length}](/output/mismatch_key.md)\n")
           puts "Unsupported File Type:   #{invalid_filename.length}"
@@ -147,9 +162,9 @@ class Inventory
         end
         
         write_arr("#{Inventory.output_dir}/has_match.md", "Has Image and Mods", has_match)
-        write_arr("#{Inventory.output_dir}/no_mods.md", "Has Image Only - No Mods", no_mods)
-        write_arr("#{Inventory.output_dir}/no_image.md", "Has Mods Only - No Images", no_image)
-        write_arr("#{Inventory.output_dir}/bad_file.md", "Has Mods Only - Bad Image Name", bad_file)
+        write_arr("#{Inventory.output_dir}/no_mods.md", "Has Image Only - No Metadata", no_mods)
+        write_arr("#{Inventory.output_dir}/no_image.md", "Has Metadata Only - No Images", no_image)
+        write_arr("#{Inventory.output_dir}/bad_file.md", "Has Metadata Only - Bad Image Name", bad_file)
         write_arr("#{Inventory.output_dir}/mismatch_key.md", "Mods Key Name does not match filename", mismatch_key)
         write_str("#{Inventory.output_dir}/invalid_filename.md", "Unsupported File Type", invalid_filename)
         write_arr("#{Inventory.output_dir}/invalid_key.md", "Object Key Does not Match Expected Pattern", invalid_key)
@@ -229,6 +244,20 @@ class Inventory
         end
     end
     
+    def write_record(f, m, as_md)
+        if as_md
+            f.write("- `#{m.key_sanitized}`; ")
+            f.write("[Metadata](/erc/#{m.key_sanitized});  #{m.dbtitle}.") if m.has_match
+            f.write("[#{m.images.length} img.](/checkm/#{m.key_sanitized}) ") if m.images.length > 0 
+            f.write("\n")
+        else
+            f.write("#{m.key_sanitized}; ")
+            f.write("#{m.dbtitle}.") if m.has_metadata
+            f.write("#{m.images.length} img. ") if m.images.length > 0 
+            f.write("\n")
+        end
+    end
+    
     def write_arr(fname, header, arr)
         File.open(fname, "w") do |f|
             f.write("# #{header}: #{arr.length}\n")
@@ -236,24 +265,24 @@ class Inventory
             write_file_ext_counts(f, arr)
             
             f.write("\n\n### Object Keys - Valid Keys\n")
+            
+            as_md = arr.length < 50000
+            f.write("\n\n<pre>\n") unless as_md
             arr.each do |k|
                 m = @inventory[k]
                 next unless m.valid_key
-                f.write("- `#{k}`; ")
-                f.write("[Metadata](/erc/#{k}); ") unless m.no_mods
-                f.write("[#{m.images.length} img](/checkm/#{m.key_sanitized}) ") if m.images.length > 0 
-                f.write("\n")
+                write_record(f, m, as_md)
             end
+            f.write("\n\n</pre>\n") unless as_md
 
             f.write("\n\n### Object Keys - Invalid Keys\n")
+            f.write("\n\n<pre>\n") unless as_md
             arr.each do |k|
                 m = @inventory[k]
                 next if m.valid_key
-                f.write("- `#{k}`; ")
-                f.write("[Metadata](/erc/#{k.gsub(%r[ ], '_')}); ") unless m.no_mods
-                f.write("[#{m.images.length} img](/checkm/#{m.key_sanitized}) ") if m.images.length > 0 
-                f.write("\n")
+                write_record(f, m, as_md)
             end
+            f.write("\n\n</pre>\n") unless as_md
         end
     end
 
@@ -325,6 +354,7 @@ class ModsFile
         @images = []
         @file_size = []
         @mods = ""
+        @dbtitle = ""
         @title_trans = ""
         @title = ""
         @who = ""
@@ -333,6 +363,19 @@ class ModsFile
         @id = ""
         @coll = ""
         @where = "pal_museum_#{key}"
+    end
+    
+    def setTitle(t)
+        @dbtitle = t.strip
+    end
+    
+    def dbtitle
+        return @dbtitle if @coll.empty?
+        "#{@dbtitle}. The #{@coll} Collection." 
+    end
+    
+    def has_dbtitle
+        !@dbtitle.empty?
     end
     
     def key
@@ -410,7 +453,11 @@ class ModsFile
     end
     
     def has_match
-        @images.length > 0 && !@mods.empty?
+        @images.length > 0 && has_metadata
+    end
+    
+    def has_metadata
+        !@mods.empty? || !@dbtitle.empty?
     end
     
     def no_mods
@@ -526,9 +573,9 @@ class ModsFile
 
     def get_md
         return if mismatch_key
-        m = no_mods ? "No metadata." : ""
+        m = has_metadata ? "": "No metadata."
         v = valid_key ? "" : "Invalid Key."
-        "- [#{key}.md](/output/#{md_file_key}/#{key}.md) #{image_count} img. #{m} #{v}\n"
+        "- [#{key}.md](/output/#{md_file_key}/#{key}.md) #{image_count} img. #{@dbtitle}. #{m} #{v}\n"
     end
     
     def write_manifest
@@ -552,6 +599,7 @@ class ModsFile
         %x[ mkdir -p #{manifest_dir} ]
         File.open(obj_md_file, "w") do |f|
             f.write("\n[Home](/output/index.md)\n\n")
+            f.write("## dbtitle: #{@dbtitle}\n")
             f.write("## who: #{@who}\n")
             f.write("## what: #{@title_trans}\n")
             f.write("## when: #{@when}\n")
@@ -591,6 +639,7 @@ end
 Inventory.show_settings
 inventory = Inventory.new
 inventory.read_inventory
+inventory.read_titles
 scan = Scan.new
 scan.scan(inventory)
 scan.status
