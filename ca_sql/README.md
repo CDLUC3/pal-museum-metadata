@@ -297,7 +297,7 @@ MySQL [da_ca]> select * from ca_locales;
 20 rows in set (0.00 sec)
 ```
 
-## Title Queries
+## ERC Queries
 
 ```
 select
@@ -419,113 +419,6 @@ from (
 order by idno;
 ```
 
-```
-select
-  trim(o.idno) as idno,
-  o.object_id,
-  replace(
-    replace(
-      ifnull(
-        ifnull(
-          (select trim(group_concat(ol.name separator '; ')) from ca_object_labels ol where ol.object_id = o.object_id and ol.locale_id = 1),
-          (select trim(group_concat(ol.name separator '; ')) from ca_object_labels ol where ol.object_id = o.object_id and ol.locale_id = 15)
-        ),
-        'No Title'
-      ),
-      '\n',
-      ''
-    ),
-    '\t',
-    ''
-  ) as title,
-  (
-    ifnull(
-        ifnull(
-          (
-            select trim(group_concat(l.displayname separator '; ')) 
-            from ca_entity_labels l
-            inner join ca_objects_x_entities oe 
-            on oe.entity_id = l.entity_id
-            where oe.object_id = o.object_id and oe.type_id=100 and l.locale_id = 1
-          ),
-          (
-            select trim(group_concat(l.displayname separator '; ')) 
-            from ca_entity_labels l
-            inner join ca_objects_x_entities oe 
-            on oe.entity_id = l.entity_id
-            where oe.object_id = o.object_id and oe.type_id=100 and l.locale_id = 15
-          )
-        ),
-        ''
-    )
-  ) as creator,
-  (
-    ifnull(
-        ifnull(
-          (
-            select trim(group_concat(l.displayname separator '; ')) 
-            from ca_entity_labels l
-            inner join ca_objects_x_entities oe 
-            on oe.entity_id = l.entity_id
-            where oe.object_id = o.object_id and oe.type_id=101 and l.locale_id = 1
-          ),
-          (
-            select trim(group_concat(l.displayname separator '; ')) 
-            from ca_entity_labels l
-            inner join ca_objects_x_entities oe 
-            on oe.entity_id = l.entity_id
-            where oe.object_id = o.object_id and oe.type_id=101 and l.locale_id = 15
-          )
-        ),
-        ''
-    )
-  ) as publisher,
-  (
-    ifnull(
-        ifnull(
-          (
-            select trim(group_concat(l.displayname separator '; ')) 
-            from ca_entity_labels l
-            inner join ca_objects_x_entities oe 
-            on oe.entity_id = l.entity_id
-            where oe.object_id = o.object_id and oe.type_id=102 and l.locale_id = 1
-          ),
-          (
-            select trim(group_concat(l.displayname separator '; ')) 
-            from ca_entity_labels l
-            inner join ca_objects_x_entities oe 
-            on oe.entity_id = l.entity_id
-            where oe.object_id = o.object_id and oe.type_id=102 and l.locale_id = 15
-          )
-        ),
-        ''
-    )
-  ) as contributor,
-  (
-    ifnull(
-        ifnull(
-          (
-            select trim(group_concat(l.displayname separator '; ')) 
-            from ca_entity_labels l
-            inner join ca_objects_x_entities oe 
-            on oe.entity_id = l.entity_id
-            where oe.object_id = o.object_id and oe.type_id=103 and l.locale_id = 1
-          ),
-          (
-            select trim(group_concat(l.displayname separator '; ')) 
-            from ca_entity_labels l
-            inner join ca_objects_x_entities oe 
-            on oe.entity_id = l.entity_id
-            where oe.object_id = o.object_id and oe.type_id=103 and l.locale_id = 15
-          )
-        ),
-        ''
-    )
-  ) as source
-from
-  ca_objects o
-where idno != ''
-;
 
 ```
 
