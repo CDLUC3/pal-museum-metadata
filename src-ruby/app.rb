@@ -29,7 +29,7 @@ class Inventory
         @mds = {}
         @mds_stats = {}
         @path = "/mrt/inventory/inventory.txt"
-        @titles = "/mrt/files/title.txt"
+        @titles = "/mrt/files/erc_who.csv"
         @inventory = {}
         %x[ rm -rf #{Inventory.output_dir}/* ]
     end
@@ -70,11 +70,12 @@ class Inventory
         count = 0
         File.open(@titles).each do |line|
             arr = line.split("\t")
-            next if arr.length != 3
+            next if arr.length < 4
             key = arr[0].gsub(%r[http.*$], '')
             count += 1
             mods = getMods(key)
             mods.setTitle(arr[2].gsub(%r[http.*$], ''))
+            mods.setWho(arr[3].gsub(%r[http.*$], ''))
             addToInventory(mods)
         end
         puts "Title Records Found: #{count}"
@@ -127,7 +128,7 @@ class Inventory
                     end
                 end
             else
-                invalid_key.push(k)
+                invalid_key.push(k) unless k =~ %r[^\.]
             end
             mismatch_key.push(k) if m.mismatch_key
         end
@@ -144,7 +145,6 @@ class Inventory
           f.write("\n## Analysis of Content \n")
           f.write("- [Inventory](/inventory)\n")
           f.write("- [Titles - from Database Dump](/titles)\n")
-          f.write("- [Metadata Spreadsheet](/output/metadata.tsv)\n")
           puts "Has Image and Mods: #{has_match.length}"
           f.write("- [Has Image and Mods: #{has_match.length}](/output/has_match.md)\n")
           puts "Has Mods Only - No Images:  #{no_image.length}"
@@ -169,15 +169,9 @@ class Inventory
         write_str("#{Inventory.output_dir}/invalid_filename.md", "Unsupported File Type", invalid_filename)
         write_arr("#{Inventory.output_dir}/invalid_key.md", "Object Key Does not Match Expected Pattern", invalid_key)
         
-        File.open("#{Inventory.output_dir}/metadata.tsv", "w") do |tsv|
-            tsv.write("who\twhat\twhen\twhere\timg_count\n")
-            has_match.each do |k|
-                @inventory[k].write_erc(tsv)
-            end
-        end
-
         has_match.each do |k|
             m = @inventory[k]
+            m.write_erc
             m.write_manifest
             register_script(m)
             m.write_obj_md
@@ -202,6 +196,13 @@ class Inventory
             m = @inventory[k]
             m.write_manifest
             register_script(m)
+            m.write_obj_md
+            register_md(m)
+        end
+
+        no_image.each do |k|
+            m = @inventory[k]
+            m.write_erc
             m.write_obj_md
             register_md(m)
         end
@@ -246,13 +247,27 @@ class Inventory
     
     def write_record(f, m, as_md)
         if as_md
-            f.write("- `#{m.key_sanitized}`; ")
-            f.write("[Metadata](/erc/#{m.key_sanitized});  #{m.dbtitle}.") if m.has_match
-            f.write("[#{m.images.length} img.](/checkm/#{m.key_sanitized}) ") if m.images.length > 0 
+            if m.has_mods || m.has_metadata
+                f.write("- [#{m.key}.md](/output/#{m.md_file_key}/#{m.key_sanitized}.md); ")
+            else
+                f.write("- `#{m.key_sanitized}`; ")
+            end
+            if m.has_metadata
+                f.write(m.who_what(m.dbtitle, m.dbwho)) 
+            elsif m.has_mods
+                f.write(m.who_what(m.mods_title, m.mods_who))
+            end
+            if m.images.length > 0
+                if m.valid_key
+                    f.write("[#{m.images.length} img.](/checkm/#{m.key_sanitized}) ") 
+                else
+                    f.write("#{m.images.length} img. ") 
+                end
+            end
             f.write("\n")
         else
             f.write("#{m.key_sanitized}; ")
-            f.write("#{m.dbtitle}.") if m.has_metadata
+            f.write(m.who_what(m.dbtitle, m.dbwho)) if m.has_metadata
             f.write("#{m.images.length} img. ") if m.images.length > 0 
             f.write("\n")
         end
@@ -266,23 +281,27 @@ class Inventory
             
             f.write("\n\n### Object Keys - Valid Keys\n")
             
-            as_md = arr.length < 50000
-            f.write("\n\n<pre>\n") unless as_md
-            arr.each do |k|
-                m = @inventory[k]
-                next unless m.valid_key
-                write_record(f, m, as_md)
+            if arr.length < 50000
+                arr.each do |k|
+                    m = @inventory[k]
+                    next unless m.valid_key
+                    write_record(f, m, true)
+                end
+            else
+                f.write("\n\nToo many records to display\n\n")
             end
-            f.write("\n\n</pre>\n") unless as_md
 
             f.write("\n\n### Object Keys - Invalid Keys\n")
-            f.write("\n\n<pre>\n") unless as_md
-            arr.each do |k|
-                m = @inventory[k]
-                next if m.valid_key
-                write_record(f, m, as_md)
+
+            if arr.length < 50000
+                arr.each do |k|
+                    m = @inventory[k]
+                    next if m.valid_key
+                    write_record(f, m, true)
+                end
+            else
+                f.write("\n\nToo many records to display\n\n")
             end
-            f.write("\n\n</pre>\n") unless as_md
         end
     end
 
@@ -355,10 +374,11 @@ class ModsFile
         @file_size = []
         @mods = ""
         @dbtitle = ""
-        @title_trans = ""
-        @title = ""
-        @who = ""
-        @when = ""
+        @dbwho = ""
+        @mods_title_trans = ""
+        @mods_title = ""
+        @mods_who = ""
+        @mods_when = ""
         @idnum = ""
         @id = ""
         @coll = ""
@@ -367,13 +387,27 @@ class ModsFile
     
     def setTitle(t)
         @dbtitle = t.strip
+        @dbtitle = '' if @dbtitle == 'NULL'
+    end
+
+    def setWho(t)
+        @dbwho = t.strip
+        @dbwho = '' if @dbwho == 'NULL'
     end
     
     def dbtitle
-        return @dbtitle if @coll.empty?
-        "#{@dbtitle}. The #{@coll} Collection." 
+        return @dbtitle.gsub('"', ' ') if @coll.empty?
+        "#{@dbtitle.gsub('"', ' ')}. The #{@coll} Collection." 
+    end
+
+    def dbwho
+        @dbwho.gsub('"', ' ')
     end
     
+    def who_what(what, who) 
+        who.empty? ? "#{what}; " : "#{what} (#{who}); "
+    end
+
     def has_dbtitle
         !@dbtitle.empty?
     end
@@ -434,19 +468,19 @@ class ModsFile
     def parse(fd)
         @mods = fd
         doc = Nokogiri::XML(File.open(fd))
-        @title_trans = doc.xpath("//mods:titleInfo/mods:title[@type='translated']/text()").to_s
-        @title_trans = "#{@title_trans}. The #{@coll} Collection." unless @coll.empty?
+        @mods_title_trans = doc.xpath("//mods:titleInfo/mods:title[@type='translated']/text()").to_s
+        @mods_title_trans = "#{@mods_title_trans}. The #{@coll} Collection." unless @coll.empty?
         whos = []
         doc.xpath("//mods:name[mods:role/mods:roleTerm[contains(.,'creator')]]/mods:namePart[not(@type)]/text()").each do |t|
             whos.push(t.to_s)
         end
-        @who = whos[0]
-        @when = doc.xpath("//mods:originInfo/mods:dateCreated[not(@type)]/text()").to_s
+        @mods_who = whos[0]
+        @mods_when = doc.xpath("//mods:originInfo/mods:dateCreated[not(@type)]/text()").to_s
         titles = []
         doc.xpath("//mods:titleInfo/mods:title[@lang]/text()").each do |t|
             titles.push(t.to_s)
         end
-        @title = titles.join(" ")
+        @mods_title = titles.join(" ")
         @idnum = doc.xpath("//mods:identifier[@type='local']/text()[not(contains(., '.'))]").to_s
         @id = doc.xpath("//mods:identifier[@type='local']/text()[contains(., '.')]").to_s
         @where = "pal_museum_#{id}"
@@ -460,11 +494,10 @@ class ModsFile
         !@mods.empty? || !@dbtitle.empty?
     end
     
-    def no_mods
-        return false if has_match
-        @mods.empty?
+    def has_mods
+        !@mods.empty?
     end
-
+    
     def no_image
         return false if has_match
         @images.length == 0
@@ -486,20 +519,21 @@ class ModsFile
         @mods
     end
 
-    def title
-        @title.gsub('"', ' ')
+    def mods_title
+        @mods_title.gsub('"', ' ')
     end
 
-    def who
-        @who.gsub('"', ' ')
+    def mods_who
+        return '' if @mods_who.nil?
+        @mods_who.gsub('"', ' ')
     end
 
-    def when
-        @when
+    def mods_when
+        @mods_when
     end
 
-    def title_trans
-        @title_trans.gsub('"', ' ')
+    def mods_title_trans
+        @mods_title_trans.gsub('"', ' ')
     end
     
     def mismatch_key
@@ -511,8 +545,8 @@ class ModsFile
     def print
         puts "Key: #{@key}"
         puts "\tMods:   #{@mods}" unless @mods.empty?
-        puts "\tTitle*: #{@title_trans}" unless @title_trans.empty?
-        puts "\tTitle:  #{@title}" unless @title.empty?
+        puts "\tTitle*: #{@mods_title_trans}" unless @mods_title_trans.empty?
+        puts "\tTitle:  #{@mods_title}" unless @mods_title.empty?
         puts "\tNum:    #{@id}" unless @id.empty?
         puts "\tId:     #{@idnum}" unless @idnum.empty?
         puts "\tImgCnt: #{image_count}"
@@ -536,7 +570,7 @@ class ModsFile
         if valid_key
             dir = @key.split(".")[0]
         else
-            dir = 'invalid_key'
+            dir = 'invalid_key_dir'
         end
         dir
     end
@@ -562,10 +596,9 @@ class ModsFile
             f.write("-F 'submitter=foo/PalMuseum' \\\n")
             f.write("-F 'responseForm=xml' \\\n")   
             f.write("-F 'profile=merritt_demo_content' \\\n")
-            f.write("-F \"title=#{@title_trans}\" \\\n")
-            f.write("-F \"creator=#{@who}\" \\\n")
-            f.write("-F 'date=#{@when}' \\\n")
-            f.write("-F 'localIdentifier=#{@where}' \\\n")
+            f.write("-F \"title=#{dbtitle}\" \\\n")
+            f.write("-F \"creator=#{dbwho}\" \\\n")
+            f.write("-F 'localIdentifier=#{where}' \\\n")
             f.write("https://#{Inventory.merritt_instance}.cdlib.org/object/update\n\n")
         end
         script_file
@@ -575,7 +608,7 @@ class ModsFile
         return if mismatch_key
         m = has_metadata ? "": "No metadata."
         v = valid_key ? "" : "Invalid Key."
-        "- [#{key}.md](/output/#{md_file_key}/#{key}.md) #{image_count} img. #{@dbtitle}. #{m} #{v}\n"
+        "- [#{key}.md](/output/#{md_file_key}/#{key}.md) #{image_count} img. #{who_what(dbtitle, dbwho)}. #{m} #{v}\n"
     end
     
     def write_manifest
@@ -587,7 +620,7 @@ class ModsFile
             f.write("#%prefix | mrt: | http://merritt.cdlib.org/terms#\n")
             f.write("#%prefix | nfo: | http://www.semanticdesktop.org/ontologies/2007/03/22/nfo#\n")
             f.write("#%fields | nfo:fileurl | nfo:hashalgorithm | nfo:hashvalue | nfo:filesize | nfo:filelastmodified | nfo:filename | mrt:mimetype\n")
-            f.write("http://uc3-mrtdocker01x2-dev.cdlib.org:8097/mods/#{fname} |  |  |  |  | #{fname} | \n") unless no_mods
+            # f.write("http://uc3-mrtdocker01x2-dev.cdlib.org:8097/mods/#{fname} |  |  |  |  | #{fname} | \n") if has_mods
             @images.each do |im|
                 f.write("http://uc3-mrtdocker01x2-dev.cdlib.org:8097/image/#{im} |  |  |  |  | #{File.basename(im)} | \n")
             end
@@ -599,39 +632,30 @@ class ModsFile
         %x[ mkdir -p #{manifest_dir} ]
         File.open(obj_md_file, "w") do |f|
             f.write("\n[Home](/output/index.md)\n\n")
-            f.write("## dbtitle: #{@dbtitle}\n")
-            f.write("## who: #{@who}\n")
-            f.write("## what: #{@title_trans}\n")
-            f.write("## when: #{@when}\n")
-            f.write("## where: `#{@where}`\n")
+            f.write("## where: `#{where}`\n")
+            f.write("## dbtitle: #{dbtitle}\n")
+            f.write("## dbwho: #{dbwho}\n")
+            f.write("## mods who: #{mods_who}\n")
+            f.write("## mods what: #{mods_title_trans}\n")
+            f.write("## mods when: #{mods_when}\n")
 
-            f.write("- [mods](/mods/#{key_sanitized})\n") unless no_mods
+            f.write("- [mods](/mods/#{key_sanitized})\n") if has_mods
             @images.each_with_index do |im,i|
                 f.write("- [#{File.basename(im)} (#{@file_size[i]})](/image/#{im})\n")
             end
         end
     end
     
-    def write_erc(tsv)
+    def write_erc()
         return if mismatch_key
         %x[ mkdir -p #{manifest_dir} ]
         File.open(erc_file, "w") do |f|
             f.write("erc:\n")
-            f.write("who: #{@who}\n")
-            f.write("what: #{@title_trans}\n")
-            f.write("when: #{@when}\n")
-            f.write("where: #{@where}\n")
+            f.write("who: #{dbwho}\n")
+            f.write("what: #{dbtitle}\n")
+            f.write("when: \n")
+            f.write("where: #{where}\n")
         end
-        tsv.write(@who)
-        tsv.write("\t")
-        tsv.write(@title_trans)
-        tsv.write("\t")
-        tsv.write(@when)
-        tsv.write("\t")
-        tsv.write(@where)
-        tsv.write("\t")
-        tsv.write(@images.length)
-        tsv.write("\n")
     end
         
 end
