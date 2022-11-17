@@ -311,12 +311,12 @@ select
   case
     when creator_eng_first is not null then creator_eng_first
     when creator_arb_first is not null then creator_arb_first
-    when source_eng is not null then source_eng
-    when source_arb is not null then source_arb
     when publisher_eng is not null then publisher_eng
     when publisher_arb is not null then publisher_arb
     when contributor_eng is not null then contributor_eng
     when contributor_arb is not null then contributor_arb
+    when source_eng is not null then source_eng
+    when source_arb is not null then source_arb
   end as erc_who,
   case
     when creator_eng is null then creator_arb
