@@ -420,14 +420,27 @@ order by idno;
 ```
 
 
-```
-
 ## Entity Queries - erc_who?
 
 ```
 select distinct entity_id, displayname from ca_entity_labels;
-```
 
+MySQL [da_ca]> select distinct entity_id, displayname from ca_entity_labels limit 10;
++-----------+------------------------------------------------+
+| entity_id | displayname                                    |
++-----------+------------------------------------------------+
+|         3 | Marc Rudin [Jihad Mansur]                      |
+|         3 | [مارك رودين [جهاد منصور                        |
+|         4 | Australian Union of Students                   |
+|         5 | Tricontinental Films                           |
+|         4 | اتحاد الطلبة الأسترالي                         |
+|         6 | Ismail Shammut                                 |
+|         7 | David Roberts                                  |
+|         8 | Unified Information                            |
+|         6 | اسماعيل شموط                                   |
+|         8 | الإعلام الفلسطيني الموحد                       |
++-----------+------------------------------------------------+
+10 rows in set (0.00 sec)
 
 
 select 
@@ -447,6 +460,41 @@ on
   o.object_id = oe.object_id
 where
   o.idno = '0001.01.0011';
+
++-----------+-----------+-------------------------------------------------------+---------+
+| entity_id | locale_id | displayname                                           | type_id |
++-----------+-----------+-------------------------------------------------------+---------+
+|        23 |         1 | Gamal Afaghani                                        |     100 |
+|        23 |         1 | Gamal al-Afaghani                                     |     100 |
+|        23 |         1 | Gamal al-Afaghany                                     |     100 |
+|        23 |         1 | Jamal Afaghani                                        |     100 |
+|        23 |         1 | Jamal Afaghany                                        |     100 |
+|        23 |         1 | Jamal Afghany                                         |     100 |
+|        23 |         1 | Jamal al-Afaghani                                     |     100 |
+|        23 |         1 | Jamal al-Afaghany                                     |     100 |
+|        23 |        15 | جمال الأفغاني                                         |     100 |
+|         8 |         1 | Unified Information                                   |     101 |
+|         8 |        15 | الإعلام الفلسطيني الموحد                              |     101 |
+|        47 |         1 | Palestine Liberation Organisation                     |     101 |
+|        47 |        15 | منظمة التحرير الفلسطينية                              |     101 |
+|        10 |         1 | Palestinian liberation movement                       |     101 |
+|        10 |         1 | Palestinian National Liberation Movement- Fatah       |     101 |
+|        10 |        15 | حركة التحرر الوطني الفلسطيني                          |     101 |
+|        10 |        15 | حركة التحرير الوطني- فتح                              |     101 |
+|      2678 |         1 | Hands                                                 |     179 |
+|      2677 |         1 | Sun                                                   |     179 |
+|      2714 |         1 | Grass                                                 |     179 |
+|      2614 |         1 | House                                                 |     179 |
+|      2715 |         1 | Wheat                                                 |     179 |
+|        47 |         1 | Palestine Liberation Organisation                     |     102 |
+|        47 |        15 | منظمة التحرير الفلسطينية                              |     102 |
+|      6607 |         1 | Ali Kazak                                             |     102 |
+|      6607 |        15 | علي قزق                                               |     102 |
+|      1375 |         1 | Posters                                               |     102 |
+|      1375 |        15 | الملصقات                                              |     102 |
++-----------+-----------+-------------------------------------------------------+---------+
+28 rows in set (0.03 sec)
+
 ```
 
 
