@@ -447,7 +447,7 @@ on
   o.object_id = oe.object_id
 where
   o.idno = '0001.01.0011';
-
+```
 
 
 ## Understanding type relationships
@@ -491,3 +491,83 @@ on
   oe.entity_id = l.entity_id
 where 
   oe.type_id=100;
+```
+
+## ca_objects
+
+```
+MySQL [da_ca]> describe ca_objects;
++---------------------------------+-------------------------+------+-----+---------+----------------+
+| Field                           | Type                    | Null | Key | Default | Extra          |
++---------------------------------+-------------------------+------+-----+---------+----------------+
+| object_id                       | int unsigned            | NO   | PRI | NULL    | auto_increment |
+| parent_id                       | int unsigned            | YES  | MUL | NULL    |                |
+| lot_id                          | int unsigned            | YES  | MUL | NULL    |                |
+| locale_id                       | smallint unsigned       | YES  | MUL | NULL    |                |
+| source_id                       | int unsigned            | YES  | MUL | NULL    |                |
+| is_template                     | tinyint unsigned        | NO   |     | 0       |                |
+| commenting_status               | tinyint unsigned        | NO   |     | 0       |                |
+| tagging_status                  | tinyint unsigned        | NO   |     | 0       |                |
+| rating_status                   | tinyint unsigned        | NO   |     | 0       |                |
+| view_count                      | int unsigned            | NO   | MUL | 0       |                |
+| type_id                         | int unsigned            | NO   | MUL | NULL    |                |
+| idno                            | varchar(255)            | NO   | MUL | NULL    |                |
+| idno_sort                       | varchar(255)            | NO   | MUL | NULL    |                |
+| acquisition_type_id             | int unsigned            | YES  | MUL | NULL    |                |
+| item_status_id                  | int unsigned            | YES  | MUL | NULL    |                |
+| source_info                     | longtext                | NO   |     | NULL    |                |
+| hier_object_id                  | int unsigned            | NO   | MUL | NULL    |                |
+| hier_left                       | decimal(30,20) unsigned | NO   | MUL | NULL    |                |
+| hier_right                      | decimal(30,20) unsigned | NO   | MUL | NULL    |                |
+| extent                          | int unsigned            | NO   |     | NULL    |                |
+| extent_units                    | varchar(255)            | NO   |     | NULL    |                |
+| access                          | tinyint unsigned        | NO   |     | 0       |                |
+| status                          | tinyint unsigned        | NO   |     | 0       |                |
+| deleted                         | tinyint unsigned        | NO   |     | 0       |                |
+| rank                            | int unsigned            | NO   |     | 0       |                |
+| acl_inherit_from_ca_collections | tinyint unsigned        | NO   | MUL | 0       |                |
+| acl_inherit_from_parent         | tinyint unsigned        | NO   | MUL | 0       |                |
+| access_inherit_from_parent      | tinyint unsigned        | NO   |     | 0       |                |
+| home_location_id                | int unsigned            | YES  | MUL | NULL    |                |
+| accession_sdatetime             | decimal(30,20)          | YES  | MUL | NULL    |                |
+| accession_edatetime             | decimal(30,20)          | YES  | MUL | NULL    |                |
+| deaccession_sdatetime           | decimal(30,20)          | YES  | MUL | NULL    |                |
+| deaccession_edatetime           | decimal(30,20)          | YES  | MUL | NULL    |                |
+| is_deaccessioned                | tinyint                 | NO   | MUL | 0       |                |
+| deaccession_notes               | text                    | NO   |     | NULL    |                |
+| deaccession_type_id             | int unsigned            | YES  | MUL | NULL    |                |
+| current_loc_class               | tinyint unsigned        | YES  | MUL | NULL    |                |
+| current_loc_subclass            | int unsigned            | YES  | MUL | NULL    |                |
+| current_loc_id                  | int unsigned            | YES  | MUL | NULL    |                |
+| circulation_status_id           | int unsigned            | YES  | MUL | NULL    |                |
+| deaccession_disposal_sdatetime  | decimal(30,20)          | YES  | MUL | NULL    |                |
+| deaccession_disposal_edatetime  | decimal(30,20)          | YES  | MUL | NULL    |                |
++---------------------------------+-------------------------+------+-----+---------+----------------+
+42 rows in set (0.00 sec)
+
+MySQL [da_ca]> select idno from ca_objects limit 10;
++---------------+
+| idno          |
++---------------+
+|               |
+|  0157.01.0019 |
+| 0001.01.0001  |
+| 0001.01.0002  |
+| 0001.01.0003  |
+| 0001.01.0004  |
+| 0001.01.0005  |
+| 0001.01.0006  |
+| 0001.01.0007  |
+| 0001.01.0008  |
++---------------+
+10 rows in set (0.00 sec)
+
+MySQL [da_ca]> select * from ca_objects limit 1;
++-----------+-----------+--------+-----------+-----------+-------------+-------------------+----------------+---------------+------------+---------+--------------+--------------------------------------------------------------------------------------------------------------------------+---------------------+----------------+-------------+----------------+------------------------+--------------------------+--------+--------------+--------+--------+---------+------+---------------------------------+-------------------------+----------------------------+------------------+---------------------+---------------------+-----------------------+-----------------------+------------------+-------------------+---------------------+-------------------+----------------------+----------------+-----------------------+--------------------------------+--------------------------------+
+| object_id | parent_id | lot_id | locale_id | source_id | is_template | commenting_status | tagging_status | rating_status | view_count | type_id | idno         | idno_sort                                                                                                                | acquisition_type_id | item_status_id | source_info | hier_object_id | hier_left              | hier_right               | extent | extent_units | access | status | deleted | rank | acl_inherit_from_ca_collections | acl_inherit_from_parent | access_inherit_from_parent | home_location_id | accession_sdatetime | accession_edatetime | deaccession_sdatetime | deaccession_edatetime | is_deaccessioned | deaccession_notes | deaccession_type_id | current_loc_class | current_loc_subclass | current_loc_id | circulation_status_id | deaccession_disposal_sdatetime | deaccession_disposal_edatetime |
++-----------+-----------+--------+-----------+-----------+-------------+-------------------+----------------+---------------+------------+---------+--------------+--------------------------------------------------------------------------------------------------------------------------+---------------------+----------------+-------------+----------------+------------------------+--------------------------+--------+--------------+--------+--------+---------+------+---------------------------------+-------------------------+----------------------------+------------------+---------------------+---------------------+-----------------------+-----------------------+------------------+-------------------+---------------------+-------------------+----------------------+----------------+-----------------------+--------------------------------+--------------------------------+
+|        13 |      NULL |   NULL |      NULL |      NULL |           0 |                 0 |              0 |             0 |          3 |      24 | 0001.01.0001 |                 0001                                      01                                    0001                     |                  43 |           NULL | Tjs=        |             13 | 1.00000000000000000000 | 101.00000000000000000000 |      0 |              |      1 |      5 |       0 |   13 |                               0 |                       0 |                          0 |             NULL |                NULL |                NULL |                  NULL |                  NULL |                0 |                   |                NULL |              NULL |                 NULL |           NULL |                  NULL |                           NULL |                           NULL |
++-----------+-----------+--------+-----------+-----------+-------------+-------------------+----------------+---------------+------------+---------+--------------+--------------------------------------------------------------------------------------------------------------------------+---------------------+----------------+-------------+----------------+------------------------+--------------------------+--------+--------------+--------+--------+---------+------+---------------------------------+-------------------------+----------------------------+------------------+---------------------+---------------------+-----------------------+-----------------------+------------------+-------------------+---------------------+-------------------+----------------------+----------------+-----------------------+--------------------------------+--------------------------------+
+1 row in set (0.01 sec)
+```
+
