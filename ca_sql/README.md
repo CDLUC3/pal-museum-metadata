@@ -527,18 +527,23 @@ group by
 |     179 | tag         |   211128 |
 |     181 | Subject.e   |    48695 |
 +---------+-------------+----------+
-```
 
-select 
-  distinct l.displayname 
-from
-  ca_entity_labels l
-inner join
-  ca_objects_x_entities oe 
-on
-  oe.entity_id = l.entity_id
-where 
-  oe.type_id=100;
+MySQL [da_ca]> select    distinct l.displayname  from   ca_entity_labels l inner join   ca_objects_x_entities oe  on   oe.entity_id = l.entity_id where    oe.type_id=100 limit 10;
++------------------------------------------------+
+| displayname                                    |
++------------------------------------------------+
+| Marc Rudin [Jihad Mansur]                      |
+| [مارك رودين [جهاد منصور                        |
+| Ismail Shammut                                 |
+| David Roberts                                  |
+| Unified Information                            |
+| اسماعيل شموط                                   |
+| الإعلام الفلسطيني الموحد                       |
+| ديفد روبرتس                                    |
+| Samir Salameh                                  |
+| سمير سلامة                                     |
++------------------------------------------------+
+10 rows in set (0.00 sec)
 ```
 
 ## ca_objects
