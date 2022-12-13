@@ -382,7 +382,7 @@ class ModsFile
         @idnum = ""
         @id = ""
         @coll = ""
-        @where = "pal_museum_#{key}"
+        @where = "#{key}"
     end
     
     def setTitle(t)
@@ -483,7 +483,7 @@ class ModsFile
         @mods_title = titles.join(" ")
         @idnum = doc.xpath("//mods:identifier[@type='local']/text()[not(contains(., '.'))]").to_s
         @id = doc.xpath("//mods:identifier[@type='local']/text()[contains(., '.')]").to_s
-        @where = "pal_museum_#{id}"
+        @where = "#{id}"
     end
     
     def has_match
@@ -590,18 +590,25 @@ class ModsFile
     def write_script
         return if mismatch_key
         File.open(script_file, "a") do |f|
-            f.write("curl -u '#{Inventory.merritt_user}:#{Inventory.merritt_password}' -H 'Accept: application/json' \\\n")
-            f.write("-F 'file=@#{manifest_dir}/#{key}.checkm' \\\n")
-            f.write("-F 'type=manifest' \\\n")
-            f.write("-F 'submitter=foo/PalMuseum' \\\n")
-            f.write("-F 'responseForm=xml' \\\n")   
-            f.write("-F 'profile=merritt_demo_content' \\\n")
-            f.write("-F \"title=#{dbtitle}\" \\\n")
-            f.write("-F \"creator=#{dbwho}\" \\\n")
-            f.write("-F 'localIdentifier=#{where}' \\\n")
-            f.write("https://#{Inventory.merritt_instance}.cdlib.org/object/update\n\n")
+            f.write(get_script)
         end
         script_file
+    end
+
+    def get_script
+        %{
+            curl -u '#{Inventory.merritt_user}:#{Inventory.merritt_password}' -H 'Accept: application/json' \\
+              -F 'file=@#{manifest_dir}/#{key}.checkm' \\
+              -F 'type=manifest' \\
+              -F 'submitter=foo/PalMuseum' \\
+              -F 'responseForm=xml' \\
+              -F 'profile=ucla_pal_museum_content' \\
+              -F "title=#{dbtitle}" \\
+              -F "creator=#{dbwho}" \\
+              -F 'localIdentifier=#{where}' \\
+            https://#{Inventory.merritt_instance}.cdlib.org/object/update
+            
+        }
     end
 
     def get_md
@@ -620,6 +627,7 @@ class ModsFile
             f.write("#%prefix | mrt: | http://merritt.cdlib.org/terms#\n")
             f.write("#%prefix | nfo: | http://www.semanticdesktop.org/ontologies/2007/03/22/nfo#\n")
             f.write("#%fields | nfo:fileurl | nfo:hashalgorithm | nfo:hashvalue | nfo:filesize | nfo:filelastmodified | nfo:filename | mrt:mimetype\n")
+            # Legacy mods files will not be published.  When better mods files are generated, these can be added to objects as an update
             # f.write("http://uc3-mrtdocker01x2-dev.cdlib.org:8097/mods/#{fname} |  |  |  |  | #{fname} | \n") if has_mods
             @images.each do |im|
                 f.write("http://uc3-mrtdocker01x2-dev.cdlib.org:8097/image/#{im} |  |  |  |  | #{File.basename(im)} | \n")
@@ -635,14 +643,19 @@ class ModsFile
             f.write("## where: `#{where}`\n")
             f.write("## dbtitle: #{dbtitle}\n")
             f.write("## dbwho: #{dbwho}\n")
-            f.write("## mods who: #{mods_who}\n")
-            f.write("## mods what: #{mods_title_trans}\n")
-            f.write("## mods when: #{mods_when}\n")
+            # f.write("## mods who: #{mods_who}\n")
+            # f.write("## mods what: #{mods_title_trans}\n")
+            # f.write("## mods when: #{mods_when}\n")
 
+            f.write("- [checkm](/checkm/#{key_sanitized})\n") if @images.length > 0
             f.write("- [mods](/mods/#{key_sanitized})\n") if has_mods
             @images.each_with_index do |im,i|
                 f.write("- [#{File.basename(im)} (#{@file_size[i]})](/image/#{im})\n")
             end
+            
+            f.write("\n<pre>\n")
+            f.write(get_script)
+            f.write("\n</pre>\n")
         end
     end
     
