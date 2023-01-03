@@ -396,12 +396,16 @@ class ModsFile
     end
     
     def dbtitle
-        return @dbtitle.gsub('"', ' ') if @coll.empty?
-        "#{@dbtitle.gsub('"', ' ')}. The #{@coll} Collection." 
+        s = @dbtitle.gsub('"', ' ').strip
+        s = "#{s}. The #{@coll} Collection." unless @coll.empty?
+        # s = s.gsub(";", '.')
+        s
     end
 
     def dbwho
-        @dbwho.gsub('"', ' ')
+        s = @dbwho.gsub('"', ' ').strip
+        # s = s.gsub(";", '.')
+        s
     end
     
     def who_what(what, who) 
@@ -603,8 +607,8 @@ class ModsFile
               -F 'submitter=foo/PalMuseum' \\
               -F 'responseForm=xml' \\
               -F 'profile=ucla_pal_museum_content' \\
-              -F "title=#{dbtitle}" \\
-              -F "creator=#{dbwho}" \\
+              -F "title=\\"#{dbtitle}\\"" \\
+              -F "creator=\\"#{dbwho}\\"" \\
               -F 'localIdentifier=#{where}' \\
             https://#{Inventory.merritt_instance}.cdlib.org/object/update
             
@@ -630,7 +634,9 @@ class ModsFile
             # Legacy mods files will not be published.  When better mods files are generated, these can be added to objects as an update
             # f.write("http://uc3-mrtdocker01x2-dev.cdlib.org:8097/mods/#{fname} |  |  |  |  | #{fname} | \n") if has_mods
             @images.each do |im|
-                f.write("http://uc3-mrtdocker01x2-dev.cdlib.org:8097/image/#{im} |  |  |  |  | #{File.basename(im)} | \n")
+                arr = im.split("/")
+                fn = arr[-2] =~ %r[^[0-9]+$] ? arr[-1] : arr[-2..-1].join("/")
+                f.write("http://uc3-mrtdocker01x2-dev.cdlib.org:8097/image/#{im} |  |  |  |  | #{fn} | \n")
             end
             f.write("#%eof\n")
         end
