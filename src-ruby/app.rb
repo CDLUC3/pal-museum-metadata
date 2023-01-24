@@ -596,12 +596,13 @@ class ModsFile
         File.open(script_file, "a") do |f|
             f.write(get_script)
         end
+        %x[chmod u+x #{script_file}]
         script_file
     end
 
     def get_script
         %{
-            curl -u '#{Inventory.merritt_user}:#{Inventory.merritt_password}' -H 'Accept: application/json' \\
+            sleep 1;curl -u '#{Inventory.merritt_user}:#{Inventory.merritt_password}' -H 'Accept: application/json' \\
               -F 'file=@#{manifest_dir}/#{key}.checkm' \\
               -F 'type=manifest' \\
               -F 'submitter=foo/PalMuseum' \\
